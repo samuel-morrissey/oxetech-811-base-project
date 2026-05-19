@@ -1,12 +1,29 @@
 {
   "name": "oxetech-811-base-project",
   "version": "1.0.0",
-  "description": "",
+  "description": "Codebase-base legada para exercicios de refatoracao incremental.",
   "license": "ISC",
   "author": "",
   "type": "commonjs",
-  "main": "index.js",
+  "main": "dist/server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "tsx watch src/server.ts",
+    "start": "node dist/server.js",
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "seed": "tsx src/seed.ts",
+    "test": "echo \"Nenhum teste automatizado configurado ainda. Crie testes durante a refatoracao.\" && exit 0"
+  },
+  "dependencies": {
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/node": "^25.9.1",
+    "tsx": "^4.22.3",
+    "typescript": "^6.0.3"
   }
 }
