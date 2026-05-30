@@ -64,3 +64,21 @@ A refatoração será considerada adequada se:
 - o comportamento esperado for preservado;
 - o Pull Request for pequeno, compreensível e bem justificado;
 - as alterações forem compatíveis com o escopo introdutório da Avaliação 1.
+
+## 8. Refatorações realizadas na Avaliação 1
+
+Nesta Avaliação 1, a refatoração ficou concentrada em `src/routes.ts`, pois a maior parte da lógica da API estava centralizada nesse arquivo.
+
+As principais melhorias foram:
+
+- centralização dos status permitidos em `ALLOWED_TICKET_STATUSES`;
+- centralização dos campos obrigatórios em `REQUIRED_TICKET_FIELDS`;
+- extração da busca de chamado por ID para `findTicketById`;
+- extração da validação de campos obrigatórios para `hasRequiredTicketFields`;
+- criação de um type guard para validar status em `isValidTicketStatus`;
+- extração da filtragem de chamados para `filterTickets`;
+- extração da montagem da resposta resumida para `enrichTicketSummary`;
+- extração da montagem da resposta detalhada para `enrichTicketDetails`;
+- centralização da geração de data ISO em `getCurrentIsoDate`.
+
+Essas mudanças melhoram legibilidade e organização sem alterar o comportamento esperado da API.
