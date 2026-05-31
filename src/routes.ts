@@ -20,7 +20,7 @@ function generateId(prefix: string) {
   return `${prefix}_${Date.now()}_${Math.floor(Math.random() * 10000)}`;
 }
 
-function calculatePriority(category: string, description: string): TicketPriority {
+function calculateTicketPriority(category: string, description: string): TicketPriority {
   if (category === "infra" || description.toLowerCase().includes("urgente")) {
     return "urgent";
   }
@@ -154,7 +154,7 @@ router.post("/tickets", (request, response) => {
     requesterId: body.requesterId,
     assignedToId: body.assignedToId,
     status: "open",
-    priority: calculatePriority(body.category, body.description),
+    priority: calculateTicketPriority(body.category, body.description),
     createdAt: now,
     updatedAt: now,
   };

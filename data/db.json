@@ -28,12 +28,12 @@
       "title": "Nao consigo acessar o ambiente virtual",
       "description": "A pagina de login informa erro mesmo com a senha correta.",
       "category": "sistemas",
-      "status": "open",
+      "status": "in_progress",
       "priority": "high",
       "requesterId": "user_ana",
       "assignedToId": "user_carla",
       "createdAt": "2026-05-01T10:00:00.000Z",
-      "updatedAt": "2026-05-01T10:00:00.000Z"
+      "updatedAt": "2026-05-31T19:50:34.785Z"
     },
     {
       "id": "ticket_002",
@@ -58,6 +58,28 @@
       "assignedToId": "user_bruno",
       "createdAt": "2026-05-03T14:20:00.000Z",
       "updatedAt": "2026-05-04T09:00:00.000Z"
+    },
+    {
+      "id": "ticket_1780255476087_3410",
+      "title": "Nao consigo enviar atividade",
+      "description": "O sistema apresenta erro ao anexar o arquivo da atividade.",
+      "category": "sistemas",
+      "requesterId": "user_ana",
+      "status": "open",
+      "priority": "high",
+      "createdAt": "2026-05-31T19:24:36.087Z",
+      "updatedAt": "2026-05-31T19:24:36.087Z"
+    },
+    {
+      "id": "ticket_1780257034721_8296",
+      "title": "Nao consigo enviar atividade",
+      "description": "O sistema apresenta erro ao anexar o arquivo da atividade.",
+      "category": "sistemas",
+      "requesterId": "user_ana",
+      "status": "open",
+      "priority": "high",
+      "createdAt": "2026-05-31T19:50:34.721Z",
+      "updatedAt": "2026-05-31T19:50:34.721Z"
     }
   ],
   "comments": [
@@ -74,6 +96,34 @@
       "authorId": "user_bruno",
       "message": "O prazo final esta registrado no ambiente virtual da disciplina.",
       "createdAt": "2026-05-04T09:00:00.000Z"
+    },
+    {
+      "id": "comment_1780255625443_2850",
+      "ticketId": "ticket_001",
+      "authorId": "user_carla",
+      "message": "Chamado em atendimento.",
+      "createdAt": "2026-05-31T19:27:05.443Z"
+    },
+    {
+      "id": "comment_1780255749446_8036",
+      "ticketId": "ticket_001",
+      "authorId": "user_carla",
+      "message": "Solicitei mais informacoes ao usuario.",
+      "createdAt": "2026-05-31T19:29:09.446Z"
+    },
+    {
+      "id": "comment_1780257034750_1567",
+      "ticketId": "ticket_001",
+      "authorId": "user_carla",
+      "message": "Chamado em atendimento.",
+      "createdAt": "2026-05-31T19:50:34.750Z"
+    },
+    {
+      "id": "comment_1780257034785_9403",
+      "ticketId": "ticket_001",
+      "authorId": "user_carla",
+      "message": "Solicitei mais informacoes ao usuario.",
+      "createdAt": "2026-05-31T19:50:34.785Z"
     }
   ]
 }
