@@ -1,6 +1,6 @@
 import { Router } from "express";
 import fs from "node:fs";
-import path from "node:path";
+import { DATABASE_PATH } from "./config/database.js";
 import type {
   Database,
   Ticket,
@@ -9,16 +9,14 @@ import type {
 } from "./types.js";
 
 const router = Router();
-const dataFile = process.env.DATA_FILE || "data/db.json";
-const databasePath = path.resolve(process.cwd(), dataFile);
 
 function readDatabase(): Database {
-  const content = fs.readFileSync(databasePath, "utf-8");
+  const content = fs.readFileSync(DATABASE_PATH, "utf-8");
   return JSON.parse(content) as Database;
 }
 
 function writeDatabase(database: Database) {
-  fs.writeFileSync(databasePath, JSON.stringify(database, null, 2));
+  fs.writeFileSync(DATABASE_PATH, JSON.stringify(database, null, 2));
 }
 
 function generateId(prefix: string) {
