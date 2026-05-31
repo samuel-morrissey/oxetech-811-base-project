@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { readDatabase, writeDatabase } from "./database";
 import type { Database, Ticket, TicketPriority, TicketStatus } from "./types";
+import { findAllTickets, findTicketById, saveTicket, updateTicket } from "./ticketRepository";
 
 const router = Router();
 
@@ -95,7 +96,7 @@ router.get("/tickets/summary", (_request, response) => {
 
 router.get("/tickets/:id", (request, response) => {
   const database = readDatabase();
-  const ticket = database.tickets.find((item) => item.id === request.params.id);
+  const ticket = findTicketById(request.params.id);
 
   if (!ticket) {
     response.status(404).json({ error: "Ticket nao encontrado", id: request.params.id });
@@ -147,8 +148,7 @@ router.post("/tickets", (request, response) => {
     updatedAt: now,
   };
 
-  database.tickets.push(ticket);
-  writeDatabase(database);
+  saveTicket(ticket);
 
   response.status(201).json(ticket);
 });
