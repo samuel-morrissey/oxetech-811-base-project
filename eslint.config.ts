@@ -8,6 +8,24 @@ export default defineConfig(
   ...tseslint.configs.recommended,
   eslintConfigPrettier,
   {
+    rules: {
+      "@typescript-eslint/no-explicit-any": "error",
+      "@typescript-eslint/no-restricted-types": [
+        "error",
+        {
+          types: {
+            unknown: {
+              message: "Use tipos especificos em vez de unknown.",
+            },
+            any: {
+              message: "Use tipos especificos em vez de any.",
+            },
+          },
+        },
+      ],
+    },
+  },
+  {
     ignores: ["dist/**", "node_modules/**", "data/**"],
   },
 );
