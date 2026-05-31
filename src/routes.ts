@@ -2,6 +2,7 @@ import { Router } from "express";
 import { readDatabase, writeDatabase } from "./database";
 import type { Database, Ticket, TicketPriority, TicketStatus } from "./types";
 import { findAllTickets, findTicketById, saveTicket, updateTicket } from "./ticketRepository";
+import { findAllUsers, findUserById } from "./userRepository";
 
 const router = Router();
 
@@ -30,9 +31,7 @@ router.get("/health", (_request, response) => {
 });
 
 router.get("/users", (_request, response) => {
-  const database = readDatabase();
-
-  response.json(database.users);
+  response.json(findAllUsers());
 });
 
 router.get("/tickets", (request, response) => {
@@ -58,8 +57,8 @@ router.get("/tickets", (request, response) => {
   }
 
   const result = tickets.map((ticket) => {
-    const requester = database.users.find((user) => user.id === ticket.requesterId);
-    const assigned = database.users.find((user) => user.id === ticket.assignedToId);
+    const requester = findUserById(ticket.requesterId);
+    const assigned = ticket.assignedToId ? findUserById(ticket.assignedToId) : undefined;
     const comments = database.comments.filter((comment) => comment.ticketId === ticket.id);
 
     return {
@@ -103,8 +102,8 @@ router.get("/tickets/:id", (request, response) => {
     return;
   }
 
-  const requester = database.users.find((user) => user.id === ticket.requesterId);
-  const assigned = database.users.find((user) => user.id === ticket.assignedToId);
+  const requester = findUserById(ticket.requesterId);
+  const assigned = ticket.assignedToId ? findUserById(ticket.assignedToId) : undefined;
   const comments = database.comments
     .filter((comment) => comment.ticketId === ticket.id)
     .map((comment) => ({
