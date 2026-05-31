@@ -1,7 +1,7 @@
 import { Router } from "express";
 import fs from "node:fs";
 import path from "node:path";
-import type { Database, Ticket, TicketPriority, TicketStatus } from "./types";
+import type { Database, PublicUser, Ticket, TicketPriority, TicketStatus, User } from "./types";
 
 const router = Router();
 const dataFile = process.env.DATA_FILE || "data/db.json";
@@ -18,6 +18,11 @@ function writeDatabase(database: Database) {
 
 function generateId(prefix: string) {
   return `${prefix}_${Date.now()}_${Math.floor(Math.random() * 10000)}`;
+}
+
+export function toPublicUser(user: User): PublicUser {
+  const { password: _password, ...rest } = user;
+  return rest;
 }
 
 function calculatePriority(category: string, description: string): TicketPriority {
@@ -42,8 +47,7 @@ router.get("/health", (_request, response) => {
 
 router.get("/users", (_request, response) => {
   const database = readDatabase();
-
-  response.json(database.users);
+  response.json(database.users.map(toPublicUser));
 });
 
 router.get("/tickets", (request, response) => {
