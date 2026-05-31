@@ -11,4 +11,4 @@ pre-commit:
 commit-msg:
   commands:
     commitlint:
-      run: npx commitlint --edit {1} --config config/commitlint.config.ts
+      run: npx commitlint --edit {1}

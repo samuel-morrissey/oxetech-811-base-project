@@ -6,7 +6,7 @@ import type {
   Ticket,
   TicketPriority,
   TicketStatus,
-} from "./types";
+} from "./types.js";
 
 const router = Router();
 const dataFile = process.env.DATA_FILE || "data/db.json";

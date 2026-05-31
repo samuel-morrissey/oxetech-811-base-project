@@ -4,9 +4,8 @@
   "description": "Codebase-base legada para exercicios de refatoracao incremental.",
   "license": "ISC",
   "author": "",
-  "type": "commonjs",
+  "type": "module",
   "main": "dist/server.js",
-  "prettier": "./config/prettier.config.ts",
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "start": "node dist/server.js",
