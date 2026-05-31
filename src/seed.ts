@@ -1,7 +1,10 @@
 import fs from "node:fs";
 import path from "node:path";
+import { DATABASE_PATH } from "./config/database.js";
+import { writeDatabase } from "./database/jsonDatabase.js";
+import type { Database } from "./types.js";
 
-const initialDatabase = {
+const initialDatabase: Database = {
   users: [
     {
       id: "user_ana",
@@ -86,12 +89,7 @@ const initialDatabase = {
   ],
 };
 
-const dataFile = process.env.DATA_FILE || "data/db.json";
-const databasePath = path.resolve(process.cwd(), dataFile);
-fs.mkdirSync(path.dirname(databasePath), { recursive: true });
-fs.writeFileSync(
-  databasePath,
-  JSON.stringify(initialDatabase, null, 2),
-);
+fs.mkdirSync(path.dirname(DATABASE_PATH), { recursive: true });
+writeDatabase(initialDatabase);
 
-console.log(`Banco de dados reiniciado em ${databasePath}`);
+console.log(`Banco de dados reiniciado em ${DATABASE_PATH}`);
