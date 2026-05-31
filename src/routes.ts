@@ -1,8 +1,11 @@
 import { Router } from "express";
-import type { Database, PublicUser, Ticket, TicketPriority, TicketStatus, User } from "./types";
+import type { Database, PublicUser, Ticket, TicketCategory, TicketPriority, TicketStatus, User } from "./types";
 import { readDatabase, writeDatabase } from "./database";
 
 const router = Router();
+
+const LONG_DESCRIPTION_THRESHOLD = 220;
+const VALID_STATUSES: TicketStatus[] = ["open", "in_progress", "resolved", "closed"];
 
 function generateId(prefix: string) {
   return `${prefix}_${Date.now()}_${Math.floor(Math.random() * 10000)}`;
@@ -13,12 +16,12 @@ export function toPublicUser(user: User): PublicUser {
   return rest;
 }
 
-function calculatePriority(category: string, description: string): TicketPriority {
+export function calculatePriority(category: TicketCategory, description: string): TicketPriority {
   if (category === "infra" || description.toLowerCase().includes("urgente")) {
     return "urgent";
   }
 
-  if (category === "sistemas" || description.length > 220) {
+  if (category === "sistemas" || description.length > LONG_DESCRIPTION_THRESHOLD) {
     return "high";
   }
 
@@ -142,11 +145,11 @@ router.post("/tickets", (request, response) => {
     id: generateId("ticket"),
     title: body.title,
     description: body.description,
-    category: body.category,
+    category: body.category as TicketCategory,
     requesterId: body.requesterId,
     assignedToId: body.assignedToId,
     status: "open",
-    priority: calculatePriority(body.category, body.description),
+    priority: calculatePriority(body.category as TicketCategory, body.description),
     createdAt: now,
     updatedAt: now,
   };
@@ -167,8 +170,8 @@ router.patch("/tickets/:id/status", (request, response) => {
     return;
   }
 
-  if (!["open", "in_progress", "resolved", "closed"].includes(newStatus)) {
-    response.status(400).json({ message: "Status invalido", allowed: ["open", "in_progress", "resolved", "closed"] });
+  if (!VALID_STATUSES.includes(newStatus)) {
+    response.status(400).json({ message: "Status invalido", allowed: VALID_STATUSES });
     return;
   }
 
