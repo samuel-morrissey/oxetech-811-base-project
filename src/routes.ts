@@ -8,12 +8,9 @@ import type {
   TicketPriority,
   TicketStatus,
 } from "./types.js";
+import { generateId } from "./utils/generateId.js";
 
 const router = Router();
-
-function generateId(prefix: string) {
-  return `${prefix}_${Date.now()}_${Math.floor(Math.random() * 10000)}`;
-}
 
 function calculatePriority(
   category: string,
