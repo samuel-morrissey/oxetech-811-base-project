@@ -110,7 +110,7 @@ router.get("/tickets/:id", (request, response) => {
   const ticket = database.tickets.find((item) => item.id === request.params.id);
 
   if (!ticket) {
-    response.status(404).json({ error: "Ticket nao encontrado", id: request.params.id });
+    response.status(404).json({ error: "Ticket não encontrado", id: request.params.id });
     return;
   }
 
@@ -199,12 +199,12 @@ router.post("/tickets/:id/comments", (request, response) => {
   const body = request.body;
 
   if (!ticket) {
-    response.status(404).json({ error: "Ticket nao encontrado" });
+    response.status(404).json({ error: "Ticket não encontrado" });
     return;
   }
 
   if (!body.message || !body.authorId) {
-    response.status(400).json({ error: "Comentario e autor sao obrigatorios" });
+    response.status(400).json({ error: "Comentário e autor são obrigatórios" });
     return;
   }
 
