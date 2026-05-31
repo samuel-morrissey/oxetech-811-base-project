@@ -1,0 +1,14 @@
+pre-commit:
+  parallel: true
+  commands:
+    eslint:
+      glob: "*.{js,ts}"
+      run: npx eslint {staged_files}
+    prettier:
+      glob: "*.{js,ts,json,md,yml,yaml}"
+      run: npx prettier --check {staged_files}
+
+commit-msg:
+  commands:
+    commitlint:
+      run: npx commitlint --edit {1} --config config/commitlint.config.ts
