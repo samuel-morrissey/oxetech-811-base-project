@@ -1,31 +1,40 @@
 import { Router } from "express";
-import fs from "node:fs";
-import path from "node:path";
-import type { Database, Ticket, TicketPriority, TicketStatus } from "./types";
+import type { Database, PublicUser, Ticket, TicketCategory, TicketPriority, TicketStatus, User } from "./types";
+import { readDatabase, writeDatabase } from "./database";
 
 const router = Router();
-const dataFile = process.env.DATA_FILE || "data/db.json";
-const databasePath = path.resolve(process.cwd(), dataFile);
 
-function readDatabase(): Database {
-  const content = fs.readFileSync(databasePath, "utf-8");
-  return JSON.parse(content) as Database;
-}
-
-function writeDatabase(database: Database) {
-  fs.writeFileSync(databasePath, JSON.stringify(database, null, 2));
-}
+const LONG_DESCRIPTION_THRESHOLD = 220;
+const VALID_STATUSES: TicketStatus[] = ["open", "in_progress", "resolved", "closed"];
 
 function generateId(prefix: string) {
   return `${prefix}_${Date.now()}_${Math.floor(Math.random() * 10000)}`;
 }
 
-function calculatePriority(category: string, description: string): TicketPriority {
+export function toPublicUser(user: User): PublicUser {
+  const { password: _password, ...rest } = user;
+  return rest;
+}
+
+function enrichTicket(ticket: Ticket, database: Database) {
+  const requester = database.users.find((user) => user.id === ticket.requesterId);
+  const assigned = database.users.find((user) => user.id === ticket.assignedToId);
+  const comments = database.comments
+    .filter((comment) => comment.ticketId === ticket.id)
+    .map((comment) => ({
+      ...comment,
+      author: database.users.find((user) => user.id === comment.authorId),
+    }));
+
+  return { ...ticket, requester, assigned, comments };
+}
+
+export function calculatePriority(category: TicketCategory, description: string): TicketPriority {
   if (category === "infra" || description.toLowerCase().includes("urgente")) {
     return "urgent";
   }
 
-  if (category === "sistemas" || description.length > 220) {
+  if (category === "sistemas" || description.length > LONG_DESCRIPTION_THRESHOLD) {
     return "high";
   }
 
@@ -42,8 +51,7 @@ router.get("/health", (_request, response) => {
 
 router.get("/users", (_request, response) => {
   const database = readDatabase();
-
-  response.json(database.users);
+  response.json(database.users.map(toPublicUser));
 });
 
 router.get("/tickets", (request, response) => {
@@ -69,16 +77,8 @@ router.get("/tickets", (request, response) => {
   }
 
   const result = tickets.map((ticket) => {
-    const requester = database.users.find((user) => user.id === ticket.requesterId);
-    const assigned = database.users.find((user) => user.id === ticket.assignedToId);
-    const comments = database.comments.filter((comment) => comment.ticketId === ticket.id);
-
-    return {
-      ...ticket,
-      requester,
-      assigned,
-      commentsCount: comments.length,
-    };
+    const { comments, ...enriched } = enrichTicket(ticket, database);
+    return { ...enriched, commentsCount: comments.length };
   });
 
   response.json(result);
@@ -110,20 +110,11 @@ router.get("/tickets/:id", (request, response) => {
   const ticket = database.tickets.find((item) => item.id === request.params.id);
 
   if (!ticket) {
-    response.status(404).json({ error: "Ticket nao encontrado", id: request.params.id });
+    response.status(404).json({ error: "Ticket não encontrado", id: request.params.id });
     return;
   }
 
-  const requester = database.users.find((user) => user.id === ticket.requesterId);
-  const assigned = database.users.find((user) => user.id === ticket.assignedToId);
-  const comments = database.comments
-    .filter((comment) => comment.ticketId === ticket.id)
-    .map((comment) => ({
-      ...comment,
-      author: database.users.find((user) => user.id === comment.authorId),
-    }));
-
-  response.json({ ...ticket, requester, assigned, comments });
+  response.json(enrichTicket(ticket, database));
 });
 
 router.post("/tickets", (request, response) => {
@@ -132,7 +123,7 @@ router.post("/tickets", (request, response) => {
 
   if (!body.title || !body.description || !body.category || !body.requesterId) {
     response.status(400).json({
-      message: "Campos obrigatorios ausentes",
+      error: "Campos obrigatórios ausentes",
       required: ["title", "description", "category", "requesterId"],
       received: body,
     });
@@ -141,7 +132,7 @@ router.post("/tickets", (request, response) => {
 
   const user = database.users.find((item) => item.id === body.requesterId);
   if (!user) {
-    response.status(400).json({ message: "Solicitante invalido" });
+    response.status(400).json({ error: "Solicitante inválido" });
     return;
   }
 
@@ -150,11 +141,11 @@ router.post("/tickets", (request, response) => {
     id: generateId("ticket"),
     title: body.title,
     description: body.description,
-    category: body.category,
+    category: body.category as TicketCategory,
     requesterId: body.requesterId,
     assignedToId: body.assignedToId,
     status: "open",
-    priority: calculatePriority(body.category, body.description),
+    priority: calculatePriority(body.category as TicketCategory, body.description),
     createdAt: now,
     updatedAt: now,
   };
@@ -171,17 +162,17 @@ router.patch("/tickets/:id/status", (request, response) => {
   const newStatus = request.body.status as TicketStatus;
 
   if (!ticket) {
-    response.status(404).json({ message: "Ticket nao encontrado" });
+    response.status(404).json({ error: "Ticket não encontrado" });
     return;
   }
 
-  if (!["open", "in_progress", "resolved", "closed"].includes(newStatus)) {
-    response.status(400).json({ message: "Status invalido", allowed: ["open", "in_progress", "resolved", "closed"] });
+  if (!VALID_STATUSES.includes(newStatus)) {
+    response.status(400).json({ error: "Status inválido", allowed: VALID_STATUSES });
     return;
   }
 
   if (newStatus === "closed" && !request.body.comment) {
-    response.status(400).json({ message: "Informe um comentario para fechar o chamado" });
+    response.status(400).json({ error: "Informe um comentário para fechar o chamado" });
     return;
   }
 
@@ -208,12 +199,12 @@ router.post("/tickets/:id/comments", (request, response) => {
   const body = request.body;
 
   if (!ticket) {
-    response.status(404).json({ error: "Ticket nao encontrado" });
+    response.status(404).json({ error: "Ticket não encontrado" });
     return;
   }
 
   if (!body.message || !body.authorId) {
-    response.status(400).json({ error: "Comentario e autor sao obrigatorios" });
+    response.status(400).json({ error: "Comentário e autor são obrigatórios" });
     return;
   }
 
