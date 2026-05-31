@@ -77,13 +77,8 @@ router.get("/tickets", (request, response) => {
   }
 
   const result = tickets.map((ticket) => {
-    const enriched = enrichTicket(ticket, database);
-    return {
-      ...ticket,
-      requester: enriched.requester,
-      assigned: enriched.assigned,
-      commentsCount: enriched.comments.length,
-    };
+    const { comments, ...enriched } = enrichTicket(ticket, database);
+    return { ...enriched, commentsCount: comments.length };
   });
 
   response.json(result);
