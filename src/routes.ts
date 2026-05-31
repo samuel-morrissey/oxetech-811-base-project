@@ -1,23 +1,15 @@
 import { Router } from "express";
-import fs from "node:fs";
-import { DATABASE_PATH } from "./config/database.js";
+import {
+  readDatabase,
+  writeDatabase,
+} from "./database/jsonDatabase.js";
 import type {
-  Database,
   Ticket,
   TicketPriority,
   TicketStatus,
 } from "./types.js";
 
 const router = Router();
-
-function readDatabase(): Database {
-  const content = fs.readFileSync(DATABASE_PATH, "utf-8");
-  return JSON.parse(content) as Database;
-}
-
-function writeDatabase(database: Database) {
-  fs.writeFileSync(DATABASE_PATH, JSON.stringify(database, null, 2));
-}
 
 function generateId(prefix: string) {
   return `${prefix}_${Date.now()}_${Math.floor(Math.random() * 10000)}`;
