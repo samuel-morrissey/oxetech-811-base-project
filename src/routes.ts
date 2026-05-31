@@ -128,7 +128,7 @@ router.post("/tickets", (request, response) => {
 
   if (!body.title || !body.description || !body.category || !body.requesterId) {
     response.status(400).json({
-      message: "Campos obrigatorios ausentes",
+      error: "Campos obrigatórios ausentes",
       required: ["title", "description", "category", "requesterId"],
       received: body,
     });
@@ -137,7 +137,7 @@ router.post("/tickets", (request, response) => {
 
   const user = database.users.find((item) => item.id === body.requesterId);
   if (!user) {
-    response.status(400).json({ message: "Solicitante invalido" });
+    response.status(400).json({ error: "Solicitante inválido" });
     return;
   }
 
@@ -167,17 +167,17 @@ router.patch("/tickets/:id/status", (request, response) => {
   const newStatus = request.body.status as TicketStatus;
 
   if (!ticket) {
-    response.status(404).json({ message: "Ticket nao encontrado" });
+    response.status(404).json({ error: "Ticket não encontrado" });
     return;
   }
 
   if (!VALID_STATUSES.includes(newStatus)) {
-    response.status(400).json({ message: "Status invalido", allowed: VALID_STATUSES });
+    response.status(400).json({ error: "Status inválido", allowed: VALID_STATUSES });
     return;
   }
 
   if (newStatus === "closed" && !request.body.comment) {
-    response.status(400).json({ message: "Informe um comentario para fechar o chamado" });
+    response.status(400).json({ error: "Informe um comentário para fechar o chamado" });
     return;
   }
 
