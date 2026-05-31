@@ -4,6 +4,10 @@ export type TicketPriority = "low" | "medium" | "high" | "urgent";
 
 export type UserRole = "student" | "teacher" | "support";
 
+// NOVO: categoria era "string" — qualquer valor era aceito sem aviso do compilador.
+// Como union type, o TypeScript rejeita automaticamente valores fora desse conjunto.
+export type TicketCategory = "infra" | "sistemas" | "academico";
+
 export interface User {
   id: string;
   name: string;
@@ -11,6 +15,10 @@ export interface User {
   role: UserRole;
   password: string;
 }
+
+// NOVO: versão do usuário sem senha, para uso nas respostas HTTP.
+// "Omit<User, 'password'>" significa: "o tipo User, exceto o campo password".
+export type PublicUser = Omit<User, "password">;
 
 export interface TicketComment {
   id: string;
@@ -24,7 +32,8 @@ export interface Ticket {
   id: string;
   title: string;
   description: string;
-  category: string;
+  // MUDOU: de "string" para "TicketCategory" — o compilador agora valida esse campo.
+  category: TicketCategory;
   status: TicketStatus;
   priority: TicketPriority;
   requesterId: string;
