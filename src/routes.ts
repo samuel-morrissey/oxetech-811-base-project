@@ -1,7 +1,12 @@
 import { Router } from "express";
 import fs from "node:fs";
 import path from "node:path";
-import type { Database, Ticket, TicketPriority, TicketStatus } from "./types";
+import type {
+  Database,
+  Ticket,
+  TicketPriority,
+  TicketStatus,
+} from "./types";
 
 const router = Router();
 const dataFile = process.env.DATA_FILE || "data/db.json";
@@ -20,8 +25,14 @@ function generateId(prefix: string) {
   return `${prefix}_${Date.now()}_${Math.floor(Math.random() * 10000)}`;
 }
 
-function calculatePriority(category: string, description: string): TicketPriority {
-  if (category === "infra" || description.toLowerCase().includes("urgente")) {
+function calculatePriority(
+  category: string,
+  description: string,
+): TicketPriority {
+  if (
+    category === "infra" ||
+    description.toLowerCase().includes("urgente")
+  ) {
     return "urgent";
   }
 
@@ -51,11 +62,15 @@ router.get("/tickets", (request, response) => {
   let tickets = database.tickets;
 
   if (request.query.status) {
-    tickets = tickets.filter((ticket) => ticket.status === request.query.status);
+    tickets = tickets.filter(
+      (ticket) => ticket.status === request.query.status,
+    );
   }
 
   if (request.query.category) {
-    tickets = tickets.filter((ticket) => ticket.category === request.query.category);
+    tickets = tickets.filter(
+      (ticket) => ticket.category === request.query.category,
+    );
   }
 
   if (request.query.search) {
@@ -69,9 +84,15 @@ router.get("/tickets", (request, response) => {
   }
 
   const result = tickets.map((ticket) => {
-    const requester = database.users.find((user) => user.id === ticket.requesterId);
-    const assigned = database.users.find((user) => user.id === ticket.assignedToId);
-    const comments = database.comments.filter((comment) => comment.ticketId === ticket.id);
+    const requester = database.users.find(
+      (user) => user.id === ticket.requesterId,
+    );
+    const assigned = database.users.find(
+      (user) => user.id === ticket.assignedToId,
+    );
+    const comments = database.comments.filter(
+      (comment) => comment.ticketId === ticket.id,
+    );
 
     return {
       ...ticket,
@@ -107,20 +128,31 @@ router.get("/tickets/summary", (_request, response) => {
 
 router.get("/tickets/:id", (request, response) => {
   const database = readDatabase();
-  const ticket = database.tickets.find((item) => item.id === request.params.id);
+  const ticket = database.tickets.find(
+    (item) => item.id === request.params.id,
+  );
 
   if (!ticket) {
-    response.status(404).json({ error: "Ticket nao encontrado", id: request.params.id });
+    response.status(404).json({
+      error: "Ticket nao encontrado",
+      id: request.params.id,
+    });
     return;
   }
 
-  const requester = database.users.find((user) => user.id === ticket.requesterId);
-  const assigned = database.users.find((user) => user.id === ticket.assignedToId);
+  const requester = database.users.find(
+    (user) => user.id === ticket.requesterId,
+  );
+  const assigned = database.users.find(
+    (user) => user.id === ticket.assignedToId,
+  );
   const comments = database.comments
     .filter((comment) => comment.ticketId === ticket.id)
     .map((comment) => ({
       ...comment,
-      author: database.users.find((user) => user.id === comment.authorId),
+      author: database.users.find(
+        (user) => user.id === comment.authorId,
+      ),
     }));
 
   response.json({ ...ticket, requester, assigned, comments });
@@ -130,7 +162,12 @@ router.post("/tickets", (request, response) => {
   const database = readDatabase();
   const body = request.body;
 
-  if (!body.title || !body.description || !body.category || !body.requesterId) {
+  if (
+    !body.title ||
+    !body.description ||
+    !body.category ||
+    !body.requesterId
+  ) {
     response.status(400).json({
       message: "Campos obrigatorios ausentes",
       required: ["title", "description", "category", "requesterId"],
@@ -139,7 +176,9 @@ router.post("/tickets", (request, response) => {
     return;
   }
 
-  const user = database.users.find((item) => item.id === body.requesterId);
+  const user = database.users.find(
+    (item) => item.id === body.requesterId,
+  );
   if (!user) {
     response.status(400).json({ message: "Solicitante invalido" });
     return;
@@ -167,7 +206,9 @@ router.post("/tickets", (request, response) => {
 
 router.patch("/tickets/:id/status", (request, response) => {
   const database = readDatabase();
-  const ticket = database.tickets.find((item) => item.id === request.params.id);
+  const ticket = database.tickets.find(
+    (item) => item.id === request.params.id,
+  );
   const newStatus = request.body.status as TicketStatus;
 
   if (!ticket) {
@@ -175,13 +216,20 @@ router.patch("/tickets/:id/status", (request, response) => {
     return;
   }
 
-  if (!["open", "in_progress", "resolved", "closed"].includes(newStatus)) {
-    response.status(400).json({ message: "Status invalido", allowed: ["open", "in_progress", "resolved", "closed"] });
+  if (
+    !["open", "in_progress", "resolved", "closed"].includes(newStatus)
+  ) {
+    response.status(400).json({
+      message: "Status invalido",
+      allowed: ["open", "in_progress", "resolved", "closed"],
+    });
     return;
   }
 
   if (newStatus === "closed" && !request.body.comment) {
-    response.status(400).json({ message: "Informe um comentario para fechar o chamado" });
+    response.status(400).json({
+      message: "Informe um comentario para fechar o chamado",
+    });
     return;
   }
 
@@ -204,7 +252,9 @@ router.patch("/tickets/:id/status", (request, response) => {
 
 router.post("/tickets/:id/comments", (request, response) => {
   const database = readDatabase();
-  const ticket = database.tickets.find((item) => item.id === request.params.id);
+  const ticket = database.tickets.find(
+    (item) => item.id === request.params.id,
+  );
   const body = request.body;
 
   if (!ticket) {
@@ -213,7 +263,9 @@ router.post("/tickets/:id/comments", (request, response) => {
   }
 
   if (!body.message || !body.authorId) {
-    response.status(400).json({ error: "Comentario e autor sao obrigatorios" });
+    response
+      .status(400)
+      .json({ error: "Comentario e autor sao obrigatorios" });
     return;
   }
 

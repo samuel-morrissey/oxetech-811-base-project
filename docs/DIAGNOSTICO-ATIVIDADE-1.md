@@ -14,16 +14,16 @@ A **Oxetech Helpdesk API** é uma API REST em Node.js/TypeScript que simula um s
 
 ### Rotas disponíveis
 
-| Método | Rota | Responsabilidade |
-|--------|------|------------------|
-| GET | `/api/health` | Healthcheck da API |
-| GET | `/api/users` | Lista usuários cadastrados |
-| GET | `/api/tickets` | Lista chamados (filtros: `status`, `category`, `search`) |
-| GET | `/api/tickets/summary` | Contagem por status e prioridade urgente |
-| GET | `/api/tickets/:id` | Detalhe do chamado com comentários |
-| POST | `/api/tickets` | Cria chamado e calcula prioridade automaticamente |
-| PATCH | `/api/tickets/:id/status` | Atualiza status (exige comentário ao fechar) |
-| POST | `/api/tickets/:id/comments` | Adiciona comentário ao chamado |
+| Método | Rota                        | Responsabilidade                                         |
+| ------ | --------------------------- | -------------------------------------------------------- |
+| GET    | `/api/health`               | Healthcheck da API                                       |
+| GET    | `/api/users`                | Lista usuários cadastrados                               |
+| GET    | `/api/tickets`              | Lista chamados (filtros: `status`, `category`, `search`) |
+| GET    | `/api/tickets/summary`      | Contagem por status e prioridade urgente                 |
+| GET    | `/api/tickets/:id`          | Detalhe do chamado com comentários                       |
+| POST   | `/api/tickets`              | Cria chamado e calcula prioridade automaticamente        |
+| PATCH  | `/api/tickets/:id/status`   | Atualiza status (exige comentário ao fechar)             |
+| POST   | `/api/tickets/:id/comments` | Adiciona comentário ao chamado                           |
 
 ### Modelo de dados
 
@@ -85,12 +85,12 @@ Embora o tipo `TicketStatus` exista em `types.ts`, a validação em runtime não
 
 Os endpoints não seguem um formato único:
 
-| Situação | Campo usado | Exemplo |
-|----------|-------------|---------|
-| Ticket não encontrado (GET) | `error` | `{ error: "Ticket nao encontrado", id: "..." }` |
-| Ticket não encontrado (PATCH) | `message` | `{ message: "Ticket nao encontrado" }` |
-| Comentário inválido | `error` | `{ error: "Comentario e autor sao obrigatorios" }` |
-| Campos obrigatórios (POST) | `message` | `{ message: "Campos obrigatorios ausentes", ... }` |
+| Situação                      | Campo usado | Exemplo                                            |
+| ----------------------------- | ----------- | -------------------------------------------------- |
+| Ticket não encontrado (GET)   | `error`     | `{ error: "Ticket nao encontrado", id: "..." }`    |
+| Ticket não encontrado (PATCH) | `message`   | `{ message: "Ticket nao encontrado" }`             |
+| Comentário inválido           | `error`     | `{ error: "Comentario e autor sao obrigatorios" }` |
+| Campos obrigatórios (POST)    | `message`   | `{ message: "Campos obrigatorios ausentes", ... }` |
 
 ### 6. Regra de negócio acoplada ao handler HTTP
 
@@ -116,4 +116,10 @@ Cada endpoint chama `readDatabase()` (e eventualmente `writeDatabase()`), lendo 
 
 ## Resumo
 
-A codebase cumpre seu papel como **aplicação legada didática**: funciona, é pequena e expõe problemas clássicos (arquivo grande, duplicação, mistura de camadas, falta de testes e ferramentas de qualidade)
+A codebase cumpre seu papel como **aplicação legada didática**: funciona, é pequena e expõe problemas clássicos (arquivo grande, duplicação, mistura de camadas, falta de testes e ferramentas de qualidade).
+
+## Evolução
+
+| Item                                     | Status               | Observação                                                                                            |
+| ---------------------------------------- | -------------------- | ----------------------------------------------------------------------------------------------------- |
+| Linter, Prettier e hooks (code smell #9) | Resolvido na task 02 | ESLint, Prettier, Commitlint e Lefthook configurados; scripts `npm run lint` e `npm run format:check` |
