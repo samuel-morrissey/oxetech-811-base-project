@@ -16,6 +16,19 @@ export function toPublicUser(user: User): PublicUser {
   return rest;
 }
 
+function enrichTicket(ticket: Ticket, database: Database) {
+  const requester = database.users.find((user) => user.id === ticket.requesterId);
+  const assigned = database.users.find((user) => user.id === ticket.assignedToId);
+  const comments = database.comments
+    .filter((comment) => comment.ticketId === ticket.id)
+    .map((comment) => ({
+      ...comment,
+      author: database.users.find((user) => user.id === comment.authorId),
+    }));
+
+  return { ...ticket, requester, assigned, comments };
+}
+
 export function calculatePriority(category: TicketCategory, description: string): TicketPriority {
   if (category === "infra" || description.toLowerCase().includes("urgente")) {
     return "urgent";
@@ -64,15 +77,12 @@ router.get("/tickets", (request, response) => {
   }
 
   const result = tickets.map((ticket) => {
-    const requester = database.users.find((user) => user.id === ticket.requesterId);
-    const assigned = database.users.find((user) => user.id === ticket.assignedToId);
-    const comments = database.comments.filter((comment) => comment.ticketId === ticket.id);
-
+    const enriched = enrichTicket(ticket, database);
     return {
       ...ticket,
-      requester,
-      assigned,
-      commentsCount: comments.length,
+      requester: enriched.requester,
+      assigned: enriched.assigned,
+      commentsCount: enriched.comments.length,
     };
   });
 
@@ -109,16 +119,7 @@ router.get("/tickets/:id", (request, response) => {
     return;
   }
 
-  const requester = database.users.find((user) => user.id === ticket.requesterId);
-  const assigned = database.users.find((user) => user.id === ticket.assignedToId);
-  const comments = database.comments
-    .filter((comment) => comment.ticketId === ticket.id)
-    .map((comment) => ({
-      ...comment,
-      author: database.users.find((user) => user.id === comment.authorId),
-    }));
-
-  response.json({ ...ticket, requester, assigned, comments });
+  response.json(enrichTicket(ticket, database));
 });
 
 router.post("/tickets", (request, response) => {
