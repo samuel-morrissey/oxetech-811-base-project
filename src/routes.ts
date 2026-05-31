@@ -1,7 +1,7 @@
 import { Router } from "express";
 import fs from "node:fs";
 import path from "node:path";
-import type { Database, Ticket, TicketPriority, TicketStatus } from "./types";
+import type { Database, Ticket, TicketStatus } from "./types";
 
 const router = Router();
 const dataFile = process.env.DATA_FILE || "data/db.json";
@@ -20,20 +20,37 @@ function generateId(prefix: string) {
   return `${prefix}_${Date.now()}_${Math.floor(Math.random() * 10000)}`;
 }
 
-function calculatePriority(category: string, description: string): TicketPriority {
-  if (category === "infra" || description.toLowerCase().includes("urgente")) {
-    return "urgent";
+enum Category {
+  Infra = "infra",
+  Sistemas = "sistemas",
+  Academico = "academico",
+}
+
+enum TicketPriority {
+  Urgent = "urgent",
+  High = "high",
+  Medium = "medium",
+  Low = "low",
+}
+
+enum Description {
+  DESCRIPTION_LENGTH_THRESHOLD = 220
+}
+
+function calculatePriority(category: Category, description: string): TicketPriority {
+  if (category === Category.Infra || description.toLowerCase().includes("urgente")) {
+    return TicketPriority.Urgent;
   }
 
-  if (category === "sistemas" || description.length > 220) {
-    return "high";
+  if (category === Category.Sistemas || description.length > Description.DESCRIPTION_LENGTH_THRESHOLD) {
+    return TicketPriority.High;
   }
 
-  if (category === "academico") {
-    return "medium";
+  if (category === Category.Academico) {
+    return TicketPriority.Medium;
   }
 
-  return "low";
+  return TicketPriority.Low;
 }
 
 router.get("/health", (_request, response) => {
@@ -46,32 +63,34 @@ router.get("/users", (_request, response) => {
   response.json(database.users);
 });
 
-router.get("/tickets", (request, response) => {
-  const database = readDatabase();
-  let tickets = database.tickets;
+function filterTickets(tickets: Ticket[], query: any): Ticket[] {
+  let result = tickets;
 
-  if (request.query.status) {
-    tickets = tickets.filter((ticket) => ticket.status === request.query.status);
+  if (query.status) {
+    result = result.filter(ticket => ticket.status === query.status);
   }
 
-  if (request.query.category) {
-    tickets = tickets.filter((ticket) => ticket.category === request.query.category);
+  if (query.category) {
+    result = result.filter(ticket => ticket.category === query.category);
   }
 
-  if (request.query.search) {
-    const search = String(request.query.search).toLowerCase();
-    tickets = tickets.filter(
-      (ticket) =>
-        ticket.title.toLowerCase().includes(search) ||
-        ticket.description.toLowerCase().includes(search) ||
-        ticket.category.toLowerCase().includes(search),
+  if (query.search) {
+    const search = String(query.search).toLowerCase();
+    result = result.filter(ticket =>
+      ticket.title.toLowerCase().includes(search) ||
+      ticket.description.toLowerCase().includes(search) ||
+      ticket.category.toLowerCase().includes(search)
     );
   }
 
-  const result = tickets.map((ticket) => {
-    const requester = database.users.find((user) => user.id === ticket.requesterId);
-    const assigned = database.users.find((user) => user.id === ticket.assignedToId);
-    const comments = database.comments.filter((comment) => comment.ticketId === ticket.id);
+  return result;
+}
+
+function enrichTickets(tickets: Ticket[], database: Database) {
+  return tickets.map(ticket => {
+    const requester = database.users.find(user => user.id === ticket.requesterId);
+    const assigned = database.users.find(user => user.id === ticket.assignedToId);
+    const comments = database.comments.filter(comment => comment.ticketId === ticket.id);
 
     return {
       ...ticket,
@@ -80,9 +99,17 @@ router.get("/tickets", (request, response) => {
       commentsCount: comments.length,
     };
   });
+}
+
+
+router.get("/tickets", (request, response) => {
+  const database = readDatabase();
+  let tickets = filterTickets(database.tickets, request.query);
+  const result = enrichTickets(tickets, database);
 
   response.json(result);
 });
+
 
 router.get("/tickets/summary", (_request, response) => {
   const database = readDatabase();
