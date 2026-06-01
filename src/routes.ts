@@ -3,36 +3,15 @@ import {
   readDatabase,
   writeDatabase,
 } from "./database/jsonDatabase.js";
+import { calculatePriority } from "./domain/calculate-priority.js";
 import {
   isValidTicketStatus,
   TICKET_STATUSES,
 } from "./domain/ticket-status.js";
-import type { Database, Ticket, TicketPriority } from "./types.js";
+import type { Database, Ticket } from "./types.js";
 import { generateId } from "./utils/generate-id.js";
 
 const router = Router();
-
-function calculatePriority(
-  category: string,
-  description: string,
-): TicketPriority {
-  if (
-    category === "infra" ||
-    description.toLowerCase().includes("urgente")
-  ) {
-    return "urgent";
-  }
-
-  if (category === "sistemas" || description.length > 220) {
-    return "high";
-  }
-
-  if (category === "academico") {
-    return "medium";
-  }
-
-  return "low";
-}
 
 router.get("/health", (_request, response) => {
   response.json({ status: "ok", service: "oxetech-helpdesk" });
