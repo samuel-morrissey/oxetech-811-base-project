@@ -12,3 +12,8 @@ commit-msg:
   commands:
     commitlint:
       run: npx commitlint --edit {1}
+
+pre-push:
+  commands:
+    test-coverage:
+      run: npm run test:coverage
