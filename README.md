@@ -131,4 +131,8 @@ Em cada PR, registre:
 
 Consulte [docs/CHECKPOINTS.md](docs/CHECKPOINTS.md) para entender o escopo esperado de cada entrega.
 
-Para validar manualmente a API apos as refatoracoes, use [docs/VALIDACAO-MANUAL-A1.md](docs/VALIDACAO-MANUAL-A1.md).
+Documentos da **Avaliação 1**:
+
+- [Diagnóstico inicial](docs/DIAGNOSTICO-ATIVIDADE-1.md)
+- [Validação manual](docs/VALIDACAO-MANUAL-A1.md)
+- [Texto do Pull Request](docs/PULL-REQUEST-AVALIACAO-1.md)

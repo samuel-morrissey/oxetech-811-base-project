@@ -120,6 +120,15 @@ A codebase cumpre seu papel como **aplicação legada didática**: funciona, é 
 
 ## Evolução
 
-| Item                                     | Status               | Observação                                                                                            |
-| ---------------------------------------- | -------------------- | ----------------------------------------------------------------------------------------------------- |
-| Linter, Prettier e hooks (code smell #9) | Resolvido na task 02 | ESLint, Prettier, Commitlint e Lefthook configurados; scripts `npm run lint` e `npm run format:check` |
+| Item                                             | Status    | Observação                                                       |
+| ------------------------------------------------ | --------- | ---------------------------------------------------------------- |
+| God file `routes.ts` (smell #1)                  | Resolvido | Estrutura feature-based; controllers, services e repositories    |
+| Duplicação de persistência (smell #2)            | Resolvido | `config/database`, `utils/json-database`; seed reutiliza módulos |
+| Duplicação de usuários/enriquecimento (smell #3) | Resolvido | Repositories + `enrich-ticket.ts`                                |
+| Magic strings de status (smell #4)               | Resolvido | `ticket-status.ts` + `isValidTicketStatus`                       |
+| Erros inconsistentes (smell #5)                  | Resolvido | `ApiError`, `NotFound`, `BadRequest` + middleware                |
+| Regra acoplada ao HTTP (smell #6)                | Resolvido | `calculate-priority.ts` em utils da feature                      |
+| Handlers longos (smell #7)                       | Resolvido | Controllers finos; lógica em services                            |
+| Ausência de testes (smell #8)                    | Resolvido | Vitest + 22 testes; cobertura mínima 70% em utils                |
+| Ausência de linter/hooks (smell #9)              | Resolvido | ESLint, Prettier, Commitlint, Lefthook                           |
+| Persistência síncrona (smell #10)                | Parcial   | Centralizada em módulo único; otimização futura                  |
