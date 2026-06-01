@@ -1,10 +1,10 @@
-import { readDatabase } from "../../utils/json-database.js";
+import type { UsersRepository } from "./users.repository.js";
 import type { User } from "./types/user.js";
 
 export class UsersService {
-  list(): User[] {
-    const database = readDatabase();
+  constructor(private readonly usersRepository: UsersRepository) {}
 
-    return database.users;
+  list(): User[] {
+    return this.usersRepository.findAll();
   }
 }

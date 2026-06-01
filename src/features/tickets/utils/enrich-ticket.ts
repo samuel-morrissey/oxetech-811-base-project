@@ -1,17 +1,18 @@
-import { findUserById } from "../../users/utils/find-user-by-id.js";
-import type { Database } from "../../../utils/database-type.js";
+import type { UsersRepository } from "../../users/users.repository.js";
 import type { Ticket } from "../types/ticket.js";
+import type { TicketsRepository } from "../tickets.repository.js";
 
 export function enrichTicketForList(
-  database: Database,
+  ticketsRepository: TicketsRepository,
+  usersRepository: UsersRepository,
   ticket: Ticket,
 ) {
-  const requester = findUserById(database, ticket.requesterId);
+  const requester = usersRepository.findById(ticket.requesterId);
   const assigned = ticket.assignedToId
-    ? findUserById(database, ticket.assignedToId)
+    ? usersRepository.findById(ticket.assignedToId)
     : undefined;
-  const comments = database.comments.filter(
-    (comment) => comment.ticketId === ticket.id,
+  const comments = ticketsRepository.findCommentsByTicketId(
+    ticket.id,
   );
 
   return {
@@ -23,18 +24,19 @@ export function enrichTicketForList(
 }
 
 export function enrichTicketWithComments(
-  database: Database,
+  ticketsRepository: TicketsRepository,
+  usersRepository: UsersRepository,
   ticket: Ticket,
 ) {
-  const requester = findUserById(database, ticket.requesterId);
+  const requester = usersRepository.findById(ticket.requesterId);
   const assigned = ticket.assignedToId
-    ? findUserById(database, ticket.assignedToId)
+    ? usersRepository.findById(ticket.assignedToId)
     : undefined;
-  const comments = database.comments
-    .filter((comment) => comment.ticketId === ticket.id)
+  const comments = ticketsRepository
+    .findCommentsByTicketId(ticket.id)
     .map((comment) => ({
       ...comment,
-      author: findUserById(database, comment.authorId),
+      author: usersRepository.findById(comment.authorId),
     }));
 
   return {

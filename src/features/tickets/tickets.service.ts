@@ -1,80 +1,67 @@
-import {
-  readDatabase,
-  writeDatabase,
-} from "../../utils/json-database.js";
 import { BadRequest, NotFound } from "../../http/api-error.js";
-import {
-  TICKET_STATUSES,
-  isValidTicketStatus,
-  type TicketStatus,
-} from "./utils/is-valid-ticket-status.js";
+import { generateId } from "../../utils/generate-id.js";
+import type { UsersRepository } from "../users/users.repository.js";
+import type { CreateTicketCommentDto } from "./dtos/create-ticket-comment.dto.js";
+import type { CreateTicketDto } from "./dtos/create-ticket.dto.js";
+import type { ListTicketsDto } from "./dtos/list-tickets.dto.js";
+import type { UpdateTicketStatusDto } from "./dtos/update-ticket-status.dto.js";
+import type { TicketsRepository } from "./tickets.repository.js";
 import type { Ticket } from "./types/ticket.js";
 import type { TicketComment } from "./types/ticket-comment.js";
-import { generateId } from "../../utils/generate-id.js";
-import { findUserById } from "../users/utils/find-user-by-id.js";
+import type { TicketSummary } from "./types/ticket-summary.js";
 import { calculatePriority } from "./utils/calculate-priority.js";
 import {
   enrichTicketForList,
   enrichTicketWithComments,
 } from "./utils/enrich-ticket.js";
 import { filterTickets } from "./utils/filter-tickets.js";
-import type { TicketFilters } from "./types/ticket-filters.js";
+import {
+  TICKET_STATUSES,
+  isValidTicketStatus,
+  type TicketStatus,
+} from "./utils/is-valid-ticket-status.js";
 import { buildTicketSummary } from "./utils/ticket-summary.js";
-import type { TicketSummary } from "./types/ticket-summary.js";
-
-export interface CreateTicketInput {
-  title: string;
-  description: string;
-  category: string;
-  requesterId: string;
-  assignedToId?: string;
-}
-
-export interface UpdateTicketStatusInput {
-  ticketId: string;
-  status: string;
-  comment?: string;
-  authorId?: string;
-}
-
-export interface CreateTicketCommentInput {
-  ticketId: string;
-  message: string;
-  authorId: string;
-}
 
 export class TicketsService {
-  list(filters: TicketFilters) {
-    const database = readDatabase();
-    const tickets = filterTickets(database.tickets, filters);
+  constructor(
+    private readonly ticketsRepository: TicketsRepository,
+    private readonly usersRepository: UsersRepository,
+  ) {}
+
+  list(filters: ListTicketsDto) {
+    const tickets = filterTickets(
+      this.ticketsRepository.findAll(),
+      filters,
+    );
 
     return tickets.map((ticket) =>
-      enrichTicketForList(database, ticket),
+      enrichTicketForList(
+        this.ticketsRepository,
+        this.usersRepository,
+        ticket,
+      ),
     );
   }
 
   summary(): TicketSummary {
-    const database = readDatabase();
-
-    return buildTicketSummary(database.tickets);
+    return buildTicketSummary(this.ticketsRepository.findAll());
   }
 
   findById(ticketId: string) {
-    const database = readDatabase();
-    const ticket = database.tickets.find(
-      (item) => item.id === ticketId,
-    );
+    const ticket = this.ticketsRepository.findById(ticketId);
 
     if (!ticket) {
       throw new NotFound("Ticket nao encontrado", { id: ticketId });
     }
 
-    return enrichTicketWithComments(database, ticket);
+    return enrichTicketWithComments(
+      this.ticketsRepository,
+      this.usersRepository,
+      ticket,
+    );
   }
 
-  create(input: CreateTicketInput): Ticket {
-    const database = readDatabase();
-
+  create(input: CreateTicketDto): Ticket {
     if (
       !input.title ||
       !input.description ||
@@ -92,7 +79,7 @@ export class TicketsService {
       });
     }
 
-    const user = findUserById(database, input.requesterId);
+    const user = this.usersRepository.findById(input.requesterId);
     if (!user) {
       throw new BadRequest("Solicitante invalido");
     }
@@ -111,17 +98,11 @@ export class TicketsService {
       updatedAt: now,
     };
 
-    database.tickets.push(ticket);
-    writeDatabase(database);
-
-    return ticket;
+    return this.ticketsRepository.create(ticket);
   }
 
-  updateStatus(input: UpdateTicketStatusInput): Ticket {
-    const database = readDatabase();
-    const ticket = database.tickets.find(
-      (item) => item.id === input.ticketId,
-    );
+  updateStatus(input: UpdateTicketStatusDto): Ticket {
+    const ticket = this.ticketsRepository.findById(input.ticketId);
 
     if (!ticket) {
       throw new NotFound("Ticket nao encontrado");
@@ -145,25 +126,25 @@ export class TicketsService {
     ticket.updatedAt = new Date().toISOString();
 
     if (input.comment) {
-      database.comments.push({
-        id: generateId("comment"),
-        ticketId: ticket.id,
-        authorId: input.authorId || ticket.requesterId,
-        message: input.comment,
-        createdAt: new Date().toISOString(),
-      });
+      this.ticketsRepository.createComment(
+        {
+          id: generateId("comment"),
+          ticketId: ticket.id,
+          authorId: input.authorId || ticket.requesterId,
+          message: input.comment,
+          createdAt: new Date().toISOString(),
+        },
+        ticket,
+      );
+
+      return ticket;
     }
 
-    writeDatabase(database);
-
-    return ticket;
+    return this.ticketsRepository.save(ticket);
   }
 
-  addComment(input: CreateTicketCommentInput): TicketComment {
-    const database = readDatabase();
-    const ticket = database.tickets.find(
-      (item) => item.id === input.ticketId,
-    );
+  addComment(input: CreateTicketCommentDto): TicketComment {
+    const ticket = this.ticketsRepository.findById(input.ticketId);
 
     if (!ticket) {
       throw new NotFound("Ticket nao encontrado");
@@ -173,18 +154,17 @@ export class TicketsService {
       throw new BadRequest("Comentario e autor sao obrigatorios");
     }
 
-    const comment: TicketComment = {
-      id: generateId("comment"),
-      ticketId: ticket.id,
-      authorId: input.authorId,
-      message: input.message,
-      createdAt: new Date().toISOString(),
-    };
-
-    database.comments.push(comment);
     ticket.updatedAt = new Date().toISOString();
-    writeDatabase(database);
 
-    return comment;
+    return this.ticketsRepository.createComment(
+      {
+        id: generateId("comment"),
+        ticketId: ticket.id,
+        authorId: input.authorId,
+        message: input.message,
+        createdAt: new Date().toISOString(),
+      },
+      ticket,
+    );
   }
 }

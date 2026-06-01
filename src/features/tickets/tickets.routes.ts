@@ -1,9 +1,16 @@
 import { Router, type Request, type Response } from "express";
+import { TicketsRepository } from "./tickets.repository.js";
 import { TicketsController } from "./tickets.controller.js";
 import { TicketsService } from "./tickets.service.js";
+import { UsersRepository } from "../users/users.repository.js";
 
 const router = Router();
-const service = new TicketsService();
+const usersRepository = new UsersRepository();
+const ticketsRepository = new TicketsRepository();
+const service = new TicketsService(
+  ticketsRepository,
+  usersRepository,
+);
 const controller = new TicketsController(service);
 
 router.get("/", (request: Request, response: Response) =>

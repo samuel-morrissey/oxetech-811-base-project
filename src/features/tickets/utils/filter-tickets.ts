@@ -1,6 +1,6 @@
 import type { Request } from "express";
 import type { Ticket } from "../types/ticket.js";
-import type { TicketFilters } from "../types/ticket-filters.js";
+import type { ListTicketsDto } from "../dtos/list-tickets.dto.js";
 
 function toQueryString(
   value: Request["query"][string],
@@ -10,7 +10,7 @@ function toQueryString(
 
 export function parseTicketFilters(
   query: Request["query"],
-): TicketFilters {
+): ListTicketsDto {
   return {
     status: toQueryString(query.status),
     category: toQueryString(query.category),
@@ -20,7 +20,7 @@ export function parseTicketFilters(
 
 export function filterTickets(
   tickets: Ticket[],
-  filters: TicketFilters,
+  filters: ListTicketsDto,
 ): Ticket[] {
   let result = tickets;
 
