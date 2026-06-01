@@ -4,8 +4,8 @@ import path from "node:path";
 import type { Database, Ticket, TicketPriority, TicketStatus } from "./types";
 
 const router = Router();
-const dataFile = process.env.DATA_FILE || "data/db.json";
-const databasePath = path.resolve(process.cwd(), dataFile);
+const dataFilePath = process.env.DATA_FILE || "data/db.json";
+const databasePath = path.resolve(process.cwd(), dataFilePath);
 
 
 function readDatabase(): Database {
@@ -139,7 +139,7 @@ router.get("/tickets/summary", (_request, response) => {
 
 router.get("/tickets/:id", (request, response) => {
   const database = readDatabase();
-  const ticket = database.tickets.find((item) => item.id === request.params.id);
+  const ticket = database.tickets.find((ticket) => ticket.id === request.params.id);
 
   if (!ticket) {
     response.status(404).json({ error: "Ticket nao encontrado", id: request.params.id });
@@ -171,7 +171,7 @@ router.post("/tickets", (request, response) => {
     return;
   }
 
-  const user = database.users.find((item) => item.id === body.requesterId);
+  const user = database.users.find((user) => user.id === body.requesterId);
   if (!user) {
     response.status(400).json({ message: "Solicitante invalido" });
     return;
@@ -199,7 +199,7 @@ router.post("/tickets", (request, response) => {
 
 router.patch("/tickets/:id/status", (request, response) => {
   const database = readDatabase();
-  const ticket = database.tickets.find((item) => item.id === request.params.id);
+  const ticket = database.tickets.find((ticket) => ticket.id === request.params.id);
   const newStatus = request.body.status as TicketStatus;
 
   if (!ticket) {
@@ -237,7 +237,7 @@ router.patch("/tickets/:id/status", (request, response) => {
 
 router.post("/tickets/:id/comments", (request, response) => {
   const database = readDatabase();
-  const ticket = database.tickets.find((item) => item.id === request.params.id);
+  const ticket = database.tickets.find((ticket) => ticket.id === request.params.id);
   const body = request.body;
 
   if (!ticket) {
