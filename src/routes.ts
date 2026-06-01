@@ -61,6 +61,8 @@ const priorityRules: PriorityRule[] = [
   new MediumPriorityRule(),
 ];
 
+const VALID_STATUSES = ["open", "in_progress", "resolved", "closed"] as const;
+
 function calculatePriority(category: string, description: string): TicketPriority {
   const matchedRule = priorityRules.find((rule) => rule.matches({ category, description }));
   return matchedRule?.priority ?? "low";
@@ -199,7 +201,6 @@ router.patch("/tickets/:id/status", (request, response) => {
   const database = readDatabase();
   const ticket = database.tickets.find((item) => item.id === request.params.id);
   const newStatus = request.body.status as TicketStatus;
-  const VALID_STATUSES = ["open", "in_progress", "resolved", "closed"];
 
   if (!ticket) {
     response.status(404).json({ message: "Ticket nao encontrado" });
