@@ -1,5 +1,5 @@
 import cors from "cors";
-import express, { Application } from "express";
+import express, { Application, json } from "express";
 import { env } from "./config/env.js";
 import { router } from "./routes/index.js";
 import { notFoundFallback } from "./routes/fallbacks.js";
@@ -11,11 +11,13 @@ export class App {
   constructor() {
     this.app = express();
     this.port = env.PORT;
+    this.middlewares();
+    this.routes();
   }
 
   middlewares() {
     this.app.use(cors());
-    this.app.use(express.json());
+    this.app.use(json());
   }
 
   routes() {
