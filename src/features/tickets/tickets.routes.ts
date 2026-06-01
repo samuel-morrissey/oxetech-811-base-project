@@ -1,10 +1,10 @@
 import { Router, type Request, type Response } from "express";
-import { TicketController } from "../controllers/ticket-controller.js";
-import { TicketService } from "../services/ticket-service.js";
+import { TicketsController } from "./tickets.controller.js";
+import { TicketsService } from "./tickets.service.js";
 
 const router = Router();
-const service = new TicketService();
-const controller = new TicketController(service);
+const service = new TicketsService();
+const controller = new TicketsController(service);
 
 router.get("/", (request: Request, response: Response) =>
   controller.index(request, response),

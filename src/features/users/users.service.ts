@@ -1,5 +1,5 @@
-import { readDatabase } from "../database/jsonDatabase.js";
-import type { User } from "../types.js";
+import { readDatabase } from "../../utils/json-database.js";
+import type { User } from "../../types/index.js";
 
 export class UsersService {
   list(): User[] {

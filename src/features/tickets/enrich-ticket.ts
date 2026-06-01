@@ -1,5 +1,5 @@
-import { findUserById } from "./find-user-by-id.js";
-import type { Database, Ticket } from "../types.js";
+import { findUserById } from "../users/find-user-by-id.js";
+import type { Database, Ticket } from "../../types/index.js";
 
 export function enrichTicketForList(
   database: Database,

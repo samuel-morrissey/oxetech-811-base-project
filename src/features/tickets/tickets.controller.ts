@@ -1,18 +1,18 @@
 import type { Request, Response } from "express";
-import { parseTicketFilters } from "../domain/filter-tickets.js";
-import { HttpStatus } from "../http/http-status.js";
-import type { TicketService } from "../services/ticket-service.js";
-import type { Controller } from "./controller.js";
+import { HttpStatus } from "../../http/http-status.js";
+import type { Controller } from "../../domain/controller.js";
+import { parseTicketFilters } from "./filter-tickets.js";
+import type { TicketsService } from "./tickets.service.js";
 
 function getRouteParam(value: string | string[]): string {
   return typeof value === "string" ? value : value[0];
 }
 
-export class TicketController implements Controller {
-  constructor(private readonly ticketService: TicketService) {}
+export class TicketsController implements Controller {
+  constructor(private readonly ticketsService: TicketsService) {}
 
   index(request: Request, response: Response): void {
-    const result = this.ticketService.list(
+    const result = this.ticketsService.list(
       parseTicketFilters(request.query),
     );
 
@@ -20,25 +20,29 @@ export class TicketController implements Controller {
   }
 
   summary(_request: Request, response: Response): void {
-    response.status(HttpStatus.OK).json(this.ticketService.summary());
+    response
+      .status(HttpStatus.OK)
+      .json(this.ticketsService.summary());
   }
 
   show(request: Request, response: Response): void {
     response
       .status(HttpStatus.OK)
       .json(
-        this.ticketService.findById(getRouteParam(request.params.id)),
+        this.ticketsService.findById(
+          getRouteParam(request.params.id),
+        ),
       );
   }
 
   store(request: Request, response: Response): void {
-    const ticket = this.ticketService.create(request.body);
+    const ticket = this.ticketsService.create(request.body);
 
     response.status(HttpStatus.CREATED).json(ticket);
   }
 
   updateStatus(request: Request, response: Response): void {
-    const ticket = this.ticketService.updateStatus({
+    const ticket = this.ticketsService.updateStatus({
       ticketId: getRouteParam(request.params.id),
       status: request.body.status,
       comment: request.body.comment,
@@ -49,7 +53,7 @@ export class TicketController implements Controller {
   }
 
   storeComment(request: Request, response: Response): void {
-    const comment = this.ticketService.addComment({
+    const comment = this.ticketsService.addComment({
       ticketId: getRouteParam(request.params.id),
       message: request.body.message,
       authorId: request.body.authorId,

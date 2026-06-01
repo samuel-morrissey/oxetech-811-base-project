@@ -1,6 +1,6 @@
 import { Router, type Request, type Response } from "express";
-import { UsersController } from "../controllers/users-controller.js";
-import { UsersService } from "../services/users-service.js";
+import { UsersController } from "./users.controller.js";
+import { UsersService } from "./users.service.js";
 
 const router = Router();
 const service = new UsersService();

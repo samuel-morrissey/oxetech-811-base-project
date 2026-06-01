@@ -1,8 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
 import { DATABASE_PATH } from "./config/database.js";
-import { writeDatabase } from "./database/jsonDatabase.js";
-import type { Database } from "./types.js";
+import type { Database } from "./types/index.js";
+import { writeDatabase } from "./utils/json-database.js";
 
 const initialDatabase: Database = {
   users: [

@@ -1,4 +1,4 @@
-import type { Ticket } from "../types.js";
+import type { Ticket } from "../../types/index.js";
 
 export interface TicketSummary {
   open: number;

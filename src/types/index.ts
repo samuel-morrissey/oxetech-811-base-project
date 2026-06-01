@@ -1,6 +1,10 @@
-import type { TicketStatus } from "./domain/ticket-status.js";
+import type { TicketStatus } from "./ticket-status.js";
 
 export type { TicketStatus };
+export {
+  TICKET_STATUSES,
+  isValidTicketStatus,
+} from "./ticket-status.js";
 
 export type TicketPriority = "low" | "medium" | "high" | "urgent";
 

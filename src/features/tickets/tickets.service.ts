@@ -1,29 +1,29 @@
 import {
   readDatabase,
   writeDatabase,
-} from "../database/jsonDatabase.js";
-import { calculatePriority } from "../domain/calculate-priority.js";
+} from "../../utils/json-database.js";
+import { BadRequest, NotFound } from "../../http/api-error.js";
+import {
+  TICKET_STATUSES,
+  isValidTicketStatus,
+  type TicketStatus,
+} from "../../types/index.js";
+import type { Ticket, TicketComment } from "../../types/index.js";
+import { generateId } from "../../utils/generate-id.js";
+import { findUserById } from "../users/find-user-by-id.js";
+import { calculatePriority } from "./calculate-priority.js";
 import {
   enrichTicketForList,
   enrichTicketWithComments,
-} from "../domain/enrich-ticket.js";
+} from "./enrich-ticket.js";
 import {
   filterTickets,
   type TicketFilters,
-} from "../domain/filter-tickets.js";
-import { findUserById } from "../domain/find-user-by-id.js";
-import {
-  isValidTicketStatus,
-  TICKET_STATUSES,
-  type TicketStatus,
-} from "../domain/ticket-status.js";
+} from "./filter-tickets.js";
 import {
   buildTicketSummary,
   type TicketSummary,
-} from "../domain/ticket-summary.js";
-import { BadRequest, NotFound } from "../http/api-error.js";
-import type { Ticket, TicketComment } from "../types.js";
-import { generateId } from "../utils/generate-id.js";
+} from "./ticket-summary.js";
 
 export interface CreateTicketInput {
   title: string;
@@ -46,7 +46,7 @@ export interface CreateTicketCommentInput {
   authorId: string;
 }
 
-export class TicketService {
+export class TicketsService {
   list(filters: TicketFilters) {
     const database = readDatabase();
     const tickets = filterTickets(database.tickets, filters);
