@@ -1,12 +1,11 @@
 import { Router, type Request, type Response } from "express";
-import { HttpStatus } from "../http/http-status.js";
+import { HealthController } from "../controllers/health-controller.js";
 
 const router = Router();
+const controller = new HealthController();
 
-router.get("/", (_request: Request, response: Response) =>
-  response
-    .status(HttpStatus.OK)
-    .json({ status: "ok", service: "oxetech-helpdesk" }),
+router.get("/", (request: Request, response: Response) =>
+  controller.index(request, response),
 );
 
 export { router as healthRouter };

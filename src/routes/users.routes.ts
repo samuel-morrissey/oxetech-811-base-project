@@ -1,14 +1,11 @@
 import { Router, type Request, type Response } from "express";
-import { readDatabase } from "../database/jsonDatabase.js";
-import type { Database } from "../types.js";
-import { HttpStatus } from "../http/http-status.js";
+import { UsersController } from "../controllers/users-controller.js";
 
 const router = Router();
+const controller = new UsersController();
 
-router.get("/", (_request: Request, response: Response) => {
-  const database: Database = readDatabase();
-
-  response.status(HttpStatus.OK).json(database.users);
-});
+router.get("/", (request: Request, response: Response) =>
+  controller.index(request, response),
+);
 
 export { router as usersRouter };
