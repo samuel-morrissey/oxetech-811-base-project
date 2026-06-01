@@ -21,20 +21,49 @@ function generateId(prefix: string) {
   return `${prefix}_${Date.now()}_${Math.floor(Math.random() * 10000)}`;
 }
 
+interface PriorityRule {
+  matches(fields: PriorityFields): boolean;
+  readonly priority: TicketPriority;
+}
+
+interface PriorityFields {
+  category: string;
+  description: string
+}
+
+class UrgentPriorityRule implements PriorityRule {
+  readonly priority: TicketPriority = "urgent"
+
+  matches(fields: PriorityFields): boolean {
+    return fields.category === "infra" || fields.description.toLowerCase().includes("urgente")
+  }
+}
+
+class HighPriorityRule implements PriorityRule {
+  readonly priority: TicketPriority = "high"
+
+  matches(fields: PriorityFields): boolean {
+    return fields.category === "sistemas" || fields.description.length > 220
+  }
+}
+
+class MediumPriorityRule implements PriorityRule {
+  readonly priority: TicketPriority = "medium"
+
+  matches(fields: PriorityFields): boolean {
+    return fields.category === "academico";
+  }
+}
+
+const priorityRules: PriorityRule[] = [
+  new UrgentPriorityRule(),
+  new HighPriorityRule(),
+  new MediumPriorityRule(),
+];
+
 function calculatePriority(category: string, description: string): TicketPriority {
-  if (category === "infra" || description.toLowerCase().includes("urgente")) {
-    return "urgent";
-  }
-
-  if (category === "sistemas" || description.length > 220) {
-    return "high";
-  }
-
-  if (category === "academico") {
-    return "medium";
-  }
-
-  return "low";
+  const matchedRule = priorityRules.find((rule) => rule.matches({ category, description }));
+  return matchedRule?.priority ?? "low";
 }
 
 router.get("/health", (_request, response) => {
