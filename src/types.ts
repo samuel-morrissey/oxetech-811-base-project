@@ -1,8 +1,6 @@
-export type TicketStatus =
-  | "open"
-  | "in_progress"
-  | "resolved"
-  | "closed";
+import type { TicketStatus } from "./domain/ticket-status.js";
+
+export type { TicketStatus };
 
 export type TicketPriority = "low" | "medium" | "high" | "urgent";
 

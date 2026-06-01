@@ -3,12 +3,12 @@ import {
   readDatabase,
   writeDatabase,
 } from "./database/jsonDatabase.js";
-import type {
-  Ticket,
-  TicketPriority,
-  TicketStatus,
-} from "./types.js";
-import { generateId } from "./utils/generateId.js";
+import {
+  isValidTicketStatus,
+  TICKET_STATUSES,
+} from "./domain/ticket-status.js";
+import type { Database, Ticket, TicketPriority } from "./types.js";
+import { generateId } from "./utils/generate-id.js";
 
 const router = Router();
 
@@ -39,29 +39,29 @@ router.get("/health", (_request, response) => {
 });
 
 router.get("/users", (_request, response) => {
-  const database = readDatabase();
+  const database: Database = readDatabase();
 
   response.json(database.users);
 });
 
 router.get("/tickets", (request, response) => {
-  const database = readDatabase();
-  let tickets = database.tickets;
+  const database: Database = readDatabase();
+  let tickets: Ticket[] = database.tickets;
 
-  if (request.query.status) {
+  if (typeof request.query.status === "string") {
     tickets = tickets.filter(
       (ticket) => ticket.status === request.query.status,
     );
   }
 
-  if (request.query.category) {
+  if (typeof request.query.category === "string") {
     tickets = tickets.filter(
       (ticket) => ticket.category === request.query.category,
     );
   }
 
-  if (request.query.search) {
-    const search = String(request.query.search).toLowerCase();
+  if (typeof request.query.search === "string") {
+    const search = request.query.search.toLowerCase();
     tickets = tickets.filter(
       (ticket) =>
         ticket.title.toLowerCase().includes(search) ||
@@ -93,7 +93,7 @@ router.get("/tickets", (request, response) => {
 });
 
 router.get("/tickets/summary", (_request, response) => {
-  const database = readDatabase();
+  const database: Database = readDatabase();
   const summary = {
     open: 0,
     in_progress: 0,
@@ -114,7 +114,7 @@ router.get("/tickets/summary", (_request, response) => {
 });
 
 router.get("/tickets/:id", (request, response) => {
-  const database = readDatabase();
+  const database: Database = readDatabase();
   const ticket = database.tickets.find(
     (item) => item.id === request.params.id,
   );
@@ -146,7 +146,7 @@ router.get("/tickets/:id", (request, response) => {
 });
 
 router.post("/tickets", (request, response) => {
-  const database = readDatabase();
+  const database: Database = readDatabase();
   const body = request.body;
 
   if (
@@ -192,11 +192,11 @@ router.post("/tickets", (request, response) => {
 });
 
 router.patch("/tickets/:id/status", (request, response) => {
-  const database = readDatabase();
+  const database: Database = readDatabase();
   const ticket = database.tickets.find(
     (item) => item.id === request.params.id,
   );
-  const newStatus = request.body.status as TicketStatus;
+  const rawStatus = request.body.status;
 
   if (!ticket) {
     response.status(404).json({ message: "Ticket nao encontrado" });
@@ -204,14 +204,17 @@ router.patch("/tickets/:id/status", (request, response) => {
   }
 
   if (
-    !["open", "in_progress", "resolved", "closed"].includes(newStatus)
+    typeof rawStatus !== "string" ||
+    !isValidTicketStatus(rawStatus)
   ) {
     response.status(400).json({
       message: "Status invalido",
-      allowed: ["open", "in_progress", "resolved", "closed"],
+      allowed: [...TICKET_STATUSES],
     });
     return;
   }
+
+  const newStatus = rawStatus;
 
   if (newStatus === "closed" && !request.body.comment) {
     response.status(400).json({
@@ -238,7 +241,7 @@ router.patch("/tickets/:id/status", (request, response) => {
 });
 
 router.post("/tickets/:id/comments", (request, response) => {
-  const database = readDatabase();
+  const database: Database = readDatabase();
   const ticket = database.tickets.find(
     (item) => item.id === request.params.id,
   );
