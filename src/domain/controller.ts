@@ -6,4 +6,5 @@ export interface Controller {
   store?(request: Request, response: Response): void;
   update?(request: Request, response: Response): void;
   destroy?(request: Request, response: Response): void;
+  summary?(request: Request, response: Response): void;
 }

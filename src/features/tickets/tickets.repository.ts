@@ -1,3 +1,4 @@
+import type { Repository } from "../../domain/repository.js";
 import {
   readDatabase,
   writeDatabase,
@@ -5,7 +6,7 @@ import {
 import type { Ticket } from "./types/ticket.js";
 import type { TicketComment } from "./types/ticket-comment.js";
 
-export class TicketsRepository {
+export class TicketsRepository implements Repository<Ticket> {
   findAll(): Ticket[] {
     return readDatabase().tickets;
   }

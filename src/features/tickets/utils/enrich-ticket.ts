@@ -1,10 +1,11 @@
-import type { UsersRepository } from "../../users/users.repository.js";
-import type { Ticket } from "../types/ticket.js";
+import type { Repository } from "../../../domain/repository.js";
 import type { TicketsRepository } from "../tickets.repository.js";
+import type { User } from "../../users/types/user.js";
+import type { Ticket } from "../types/ticket.js";
 
 export function enrichTicketForList(
   ticketsRepository: TicketsRepository,
-  usersRepository: UsersRepository,
+  usersRepository: Repository<User>,
   ticket: Ticket,
 ) {
   const requester = usersRepository.findById(ticket.requesterId);
@@ -25,7 +26,7 @@ export function enrichTicketForList(
 
 export function enrichTicketWithComments(
   ticketsRepository: TicketsRepository,
-  usersRepository: UsersRepository,
+  usersRepository: Repository<User>,
   ticket: Ticket,
 ) {
   const requester = usersRepository.findById(ticket.requesterId);

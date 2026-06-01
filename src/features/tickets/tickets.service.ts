@@ -1,11 +1,13 @@
 import { BadRequest, NotFound } from "../../http/api-error.js";
 import { generateId } from "../../utils/generate-id.js";
-import type { UsersRepository } from "../users/users.repository.js";
+import type { Repository } from "../../domain/repository.js";
+import type { Service } from "../../domain/service.js";
+import type { User } from "../users/types/user.js";
+import type { TicketsRepository } from "./tickets.repository.js";
 import type { CreateTicketCommentDto } from "./dtos/create-ticket-comment.dto.js";
 import type { CreateTicketDto } from "./dtos/create-ticket.dto.js";
 import type { ListTicketsDto } from "./dtos/list-tickets.dto.js";
 import type { UpdateTicketStatusDto } from "./dtos/update-ticket-status.dto.js";
-import type { TicketsRepository } from "./tickets.repository.js";
 import type { Ticket } from "./types/ticket.js";
 import type { TicketComment } from "./types/ticket-comment.js";
 import type { TicketSummary } from "./types/ticket-summary.js";
@@ -22,10 +24,10 @@ import {
 } from "./utils/is-valid-ticket-status.js";
 import { buildTicketSummary } from "./utils/ticket-summary.js";
 
-export class TicketsService {
+export class TicketsService implements Service {
   constructor(
     private readonly ticketsRepository: TicketsRepository,
-    private readonly usersRepository: UsersRepository,
+    private readonly usersRepository: Repository<User>,
   ) {}
 
   list(filters: ListTicketsDto) {

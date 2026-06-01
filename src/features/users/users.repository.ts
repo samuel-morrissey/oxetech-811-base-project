@@ -1,7 +1,8 @@
+import type { Repository } from "../../domain/repository.js";
 import { readDatabase } from "../../utils/json-database.js";
 import type { User } from "./types/user.js";
 
-export class UsersRepository {
+export class UsersRepository implements Repository<User> {
   findAll(): User[] {
     return readDatabase().users;
   }
