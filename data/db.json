@@ -33,7 +33,7 @@
       "requesterId": "user_ana",
       "assignedToId": "user_carla",
       "createdAt": "2026-05-01T10:00:00.000Z",
-      "updatedAt": "2026-05-31T21:28:27.003Z"
+      "updatedAt": "2026-06-01T00:51:28.450Z"
     },
     {
       "id": "ticket_002",
@@ -60,15 +60,15 @@
       "updatedAt": "2026-05-04T09:00:00.000Z"
     },
     {
-      "id": "ticket_1780262906955_9739",
+      "id": "ticket_1780275088400_9519",
       "title": "Nao consigo enviar atividade",
       "description": "O sistema apresenta erro ao anexar o arquivo da atividade.",
       "category": "sistemas",
       "requesterId": "user_ana",
       "status": "open",
       "priority": "high",
-      "createdAt": "2026-05-31T21:28:26.955Z",
-      "updatedAt": "2026-05-31T21:28:26.955Z"
+      "createdAt": "2026-06-01T00:51:28.400Z",
+      "updatedAt": "2026-06-01T00:51:28.400Z"
     }
   ],
   "comments": [
@@ -87,25 +87,18 @@
       "createdAt": "2026-05-04T09:00:00.000Z"
     },
     {
-      "id": "comment_1780260282709_4033",
+      "id": "comment_1780275088426_2650",
       "ticketId": "ticket_001",
       "authorId": "user_carla",
       "message": "Chamado em atendimento.",
-      "createdAt": "2026-05-31T20:44:42.709Z"
+      "createdAt": "2026-06-01T00:51:28.426Z"
     },
     {
-      "id": "comment_1780262906979_1778",
-      "ticketId": "ticket_001",
-      "authorId": "user_carla",
-      "message": "Chamado em atendimento.",
-      "createdAt": "2026-05-31T21:28:26.979Z"
-    },
-    {
-      "id": "comment_1780262907003_4031",
+      "id": "comment_1780275088450_5770",
       "ticketId": "ticket_001",
       "authorId": "user_carla",
       "message": "Solicitei mais informacoes ao usuario.",
-      "createdAt": "2026-05-31T21:28:27.003Z"
+      "createdAt": "2026-06-01T00:51:28.450Z"
     }
   ]
 }

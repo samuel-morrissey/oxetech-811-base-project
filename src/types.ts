@@ -1,8 +1,10 @@
 export type TicketStatus = "open" | "in_progress" | "resolved" | "closed";
 
-export type TicketPriority = "low" | "medium" | "high" | "urgent";
+export type TicketPriority = "low" | "medium" | "high" | "urgent" | undefined;
 
 export type UserRole = "student" | "teacher" | "support";
+
+export type Category = "infra" | "sistemas" | "academico";
 
 export interface User {
   id: string;
@@ -24,7 +26,7 @@ export interface Ticket {
   id: string;
   title: string;
   description: string;
-  category: string;
+  category: Category;
   status: TicketStatus;
   priority: TicketPriority;
   requesterId: string;
