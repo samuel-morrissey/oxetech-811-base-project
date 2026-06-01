@@ -1,10 +1,11 @@
 import { Router } from "express";
 import { readDatabase, writeDatabase } from "./database";
-import type { Database, Ticket, TicketPriority, TicketStatus } from "./types";
+import { VALID_STATUSES, type Database, type Ticket, type TicketPriority, type TicketStatus } from "./types";
 import { findAllTickets, findTicketById, saveTicket, updateTicket } from "./ticketRepository";
 import { findAllUsers, findUserById } from "./userRepository";
 
 const router = Router();
+const DESCRIPTION_LENGTH_HIGH_PRIORITY = 220;
 
 function generateId(prefix: string) {
   return `${prefix}_${Date.now()}_${Math.floor(Math.random() * 10000)}`;
@@ -15,7 +16,7 @@ function calculatePriority(category: string, description: string): TicketPriorit
     return "urgent";
   }
 
-  if (category === "sistemas" || description.length > 220) {
+  if (category === "sistemas" || description.length > DESCRIPTION_LENGTH_HIGH_PRIORITY) {
     return "high";
   }
 
@@ -162,8 +163,8 @@ router.patch("/tickets/:id/status", (request, response) => {
     return;
   }
 
-  if (!["open", "in_progress", "resolved", "closed"].includes(newStatus)) {
-    response.status(400).json({ message: "Status invalido", allowed: ["open", "in_progress", "resolved", "closed"] });
+  if (!VALID_STATUSES.includes(newStatus)) {
+    response.status(400).json({ message: "Status invalido", allowed: VALID_STATUSES });
     return;
   }
 
