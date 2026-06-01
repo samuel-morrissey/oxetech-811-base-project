@@ -1,12 +1,5 @@
-import type { Ticket } from "../../types/index.js";
-
-export interface TicketSummary {
-  open: number;
-  in_progress: number;
-  resolved: number;
-  closed: number;
-  urgent: number;
-}
+import type { TicketSummary } from "../types/ticket-summary.js";
+import type { Ticket } from "../types/ticket.js";
 
 export function buildTicketSummary(tickets: Ticket[]): TicketSummary {
   const summary: TicketSummary = {

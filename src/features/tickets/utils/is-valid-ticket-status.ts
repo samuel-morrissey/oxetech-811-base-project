@@ -1,11 +1,9 @@
-export const TICKET_STATUSES = [
-  "open",
-  "in_progress",
-  "resolved",
-  "closed",
-] as const;
+import {
+  TICKET_STATUSES,
+  type TicketStatus,
+} from "../types/ticket-status.js";
 
-export type TicketStatus = (typeof TICKET_STATUSES)[number];
+export { TICKET_STATUSES, type TicketStatus };
 
 const ticketStatusSet = new Set<string>(TICKET_STATUSES);
 

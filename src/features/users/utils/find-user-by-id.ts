@@ -1,4 +1,5 @@
-import type { Database, User } from "../../types/index.js";
+import type { User } from "../types/user.js";
+import type { Database } from "../../../utils/database-type.js";
 
 export function findUserById(
   database: Database,

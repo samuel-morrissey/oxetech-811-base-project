@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { DATABASE_PATH } from "./config/database.js";
-import type { Database } from "./types/index.js";
+import type { Database } from "./utils/database-type.js";
 import { writeDatabase } from "./utils/json-database.js";
 
 const initialDatabase: Database = {

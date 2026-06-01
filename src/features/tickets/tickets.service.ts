@@ -7,23 +7,20 @@ import {
   TICKET_STATUSES,
   isValidTicketStatus,
   type TicketStatus,
-} from "../../types/index.js";
-import type { Ticket, TicketComment } from "../../types/index.js";
+} from "./utils/is-valid-ticket-status.js";
+import type { Ticket } from "./types/ticket.js";
+import type { TicketComment } from "./types/ticket-comment.js";
 import { generateId } from "../../utils/generate-id.js";
-import { findUserById } from "../users/find-user-by-id.js";
-import { calculatePriority } from "./calculate-priority.js";
+import { findUserById } from "../users/utils/find-user-by-id.js";
+import { calculatePriority } from "./utils/calculate-priority.js";
 import {
   enrichTicketForList,
   enrichTicketWithComments,
-} from "./enrich-ticket.js";
-import {
-  filterTickets,
-  type TicketFilters,
-} from "./filter-tickets.js";
-import {
-  buildTicketSummary,
-  type TicketSummary,
-} from "./ticket-summary.js";
+} from "./utils/enrich-ticket.js";
+import { filterTickets } from "./utils/filter-tickets.js";
+import type { TicketFilters } from "./types/ticket-filters.js";
+import { buildTicketSummary } from "./utils/ticket-summary.js";
+import type { TicketSummary } from "./types/ticket-summary.js";
 
 export interface CreateTicketInput {
   title: string;

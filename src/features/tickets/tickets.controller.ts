@@ -1,7 +1,7 @@
 import type { Request, Response } from "express";
 import { HttpStatus } from "../../http/http-status.js";
 import type { Controller } from "../../domain/controller.js";
-import { parseTicketFilters } from "./filter-tickets.js";
+import { parseTicketFilters } from "./utils/filter-tickets.js";
 import type { TicketsService } from "./tickets.service.js";
 
 function getRouteParam(value: string | string[]): string {

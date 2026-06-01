@@ -1,4 +1,4 @@
-import type { TicketPriority } from "../../types/index.js";
+import type { TicketPriority } from "../types/ticket.js";
 
 export function calculatePriority(
   category: string,

@@ -1,11 +1,6 @@
 import type { Request } from "express";
-import type { Ticket } from "../../types/index.js";
-
-export interface TicketFilters {
-  status?: string;
-  category?: string;
-  search?: string;
-}
+import type { Ticket } from "../types/ticket.js";
+import type { TicketFilters } from "../types/ticket-filters.js";
 
 function toQueryString(
   value: Request["query"][string],

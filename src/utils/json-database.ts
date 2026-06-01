@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import { DATABASE_PATH } from "../config/database.js";
-import type { Database } from "../types/index.js";
+import type { Database } from "./database-type.js";
 
 export function readDatabase(): Database {
   const content = fs.readFileSync(DATABASE_PATH, "utf-8");
