@@ -4,6 +4,7 @@ import {
   writeDatabase,
 } from "./database/jsonDatabase.js";
 import { calculatePriority } from "./domain/calculate-priority.js";
+import { findUserById } from "./domain/find-user-by-id.js";
 import {
   isValidTicketStatus,
   TICKET_STATUSES,
@@ -50,12 +51,10 @@ router.get("/tickets", (request, response) => {
   }
 
   const result = tickets.map((ticket) => {
-    const requester = database.users.find(
-      (user) => user.id === ticket.requesterId,
-    );
-    const assigned = database.users.find(
-      (user) => user.id === ticket.assignedToId,
-    );
+    const requester = findUserById(database, ticket.requesterId);
+    const assigned = ticket.assignedToId
+      ? findUserById(database, ticket.assignedToId)
+      : undefined;
     const comments = database.comments.filter(
       (comment) => comment.ticketId === ticket.id,
     );
@@ -106,19 +105,15 @@ router.get("/tickets/:id", (request, response) => {
     return;
   }
 
-  const requester = database.users.find(
-    (user) => user.id === ticket.requesterId,
-  );
-  const assigned = database.users.find(
-    (user) => user.id === ticket.assignedToId,
-  );
+  const requester = findUserById(database, ticket.requesterId);
+  const assigned = ticket.assignedToId
+    ? findUserById(database, ticket.assignedToId)
+    : undefined;
   const comments = database.comments
     .filter((comment) => comment.ticketId === ticket.id)
     .map((comment) => ({
       ...comment,
-      author: database.users.find(
-        (user) => user.id === comment.authorId,
-      ),
+      author: findUserById(database, comment.authorId),
     }));
 
   response.json({ ...ticket, requester, assigned, comments });
@@ -142,9 +137,7 @@ router.post("/tickets", (request, response) => {
     return;
   }
 
-  const user = database.users.find(
-    (item) => item.id === body.requesterId,
-  );
+  const user = findUserById(database, body.requesterId);
   if (!user) {
     response.status(400).json({ message: "Solicitante invalido" });
     return;
