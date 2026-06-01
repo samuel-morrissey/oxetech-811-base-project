@@ -68,6 +68,10 @@ function calculatePriority(category: string, description: string): TicketPriorit
   return matchedRule?.priority ?? "low";
 }
 
+function findTicketById(database: Database, id: string): Ticket | undefined {
+  return database.tickets.find((ticket) => ticket.id === id);
+}
+
 router.get("/health", (_request, response) => {
   response.json({ status: "ok", service: "oxetech-helpdesk" });
 });
@@ -139,7 +143,7 @@ router.get("/tickets/summary", (_request, response) => {
 
 router.get("/tickets/:id", (request, response) => {
   const database = readDatabase();
-  const ticket = database.tickets.find((ticket) => ticket.id === request.params.id);
+  const ticket = findTicketById(database, request.params.id);
 
   if (!ticket) {
     response.status(404).json({ error: "Ticket nao encontrado", id: request.params.id });
@@ -199,7 +203,7 @@ router.post("/tickets", (request, response) => {
 
 router.patch("/tickets/:id/status", (request, response) => {
   const database = readDatabase();
-  const ticket = database.tickets.find((ticket) => ticket.id === request.params.id);
+  const ticket = findTicketById(database, request.params.id);
   const newStatus = request.body.status as TicketStatus;
 
   if (!ticket) {
@@ -237,7 +241,7 @@ router.patch("/tickets/:id/status", (request, response) => {
 
 router.post("/tickets/:id/comments", (request, response) => {
   const database = readDatabase();
-  const ticket = database.tickets.find((ticket) => ticket.id === request.params.id);
+  const ticket = findTicketById(database, request.params.id);
   const body = request.body;
 
   if (!ticket) {
