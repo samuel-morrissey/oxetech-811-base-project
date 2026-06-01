@@ -4,6 +4,10 @@ import {
   writeDatabase,
 } from "./database/jsonDatabase.js";
 import { calculatePriority } from "./domain/calculate-priority.js";
+import {
+  enrichTicketForList,
+  enrichTicketWithComments,
+} from "./domain/enrich-ticket.js";
 import { findUserById } from "./domain/find-user-by-id.js";
 import {
   isValidTicketStatus,
@@ -50,22 +54,9 @@ router.get("/tickets", (request, response) => {
     );
   }
 
-  const result = tickets.map((ticket) => {
-    const requester = findUserById(database, ticket.requesterId);
-    const assigned = ticket.assignedToId
-      ? findUserById(database, ticket.assignedToId)
-      : undefined;
-    const comments = database.comments.filter(
-      (comment) => comment.ticketId === ticket.id,
-    );
-
-    return {
-      ...ticket,
-      requester,
-      assigned,
-      commentsCount: comments.length,
-    };
-  });
+  const result = tickets.map((ticket) =>
+    enrichTicketForList(database, ticket),
+  );
 
   response.json(result);
 });
@@ -105,18 +96,7 @@ router.get("/tickets/:id", (request, response) => {
     return;
   }
 
-  const requester = findUserById(database, ticket.requesterId);
-  const assigned = ticket.assignedToId
-    ? findUserById(database, ticket.assignedToId)
-    : undefined;
-  const comments = database.comments
-    .filter((comment) => comment.ticketId === ticket.id)
-    .map((comment) => ({
-      ...comment,
-      author: findUserById(database, comment.authorId),
-    }));
-
-  response.json({ ...ticket, requester, assigned, comments });
+  response.json(enrichTicketWithComments(database, ticket));
 });
 
 router.post("/tickets", (request, response) => {
