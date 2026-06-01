@@ -7,6 +7,7 @@ const router = Router();
 const dataFile = process.env.DATA_FILE || "data/db.json";
 const databasePath = path.resolve(process.cwd(), dataFile);
 
+
 function readDatabase(): Database {
   const content = fs.readFileSync(databasePath, "utf-8");
   return JSON.parse(content) as Database;
@@ -169,14 +170,16 @@ router.patch("/tickets/:id/status", (request, response) => {
   const database = readDatabase();
   const ticket = database.tickets.find((item) => item.id === request.params.id);
   const newStatus = request.body.status as TicketStatus;
+  const VALID_STATUSES = ["open", "in_progress", "resolved", "closed"];
 
   if (!ticket) {
     response.status(404).json({ message: "Ticket nao encontrado" });
     return;
   }
 
-  if (!["open", "in_progress", "resolved", "closed"].includes(newStatus)) {
-    response.status(400).json({ message: "Status invalido", allowed: ["open", "in_progress", "resolved", "closed"] });
+
+  if (!VALID_STATUSES.includes(newStatus)) {
+    response.status(400).json({ message: "Status invalido", allowed: VALID_STATUSES });
     return;
   }
 
