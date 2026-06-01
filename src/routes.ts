@@ -8,6 +8,10 @@ import {
   enrichTicketForList,
   enrichTicketWithComments,
 } from "./domain/enrich-ticket.js";
+import {
+  filterTickets,
+  parseTicketFilters,
+} from "./domain/filter-tickets.js";
 import { findUserById } from "./domain/find-user-by-id.js";
 import {
   isValidTicketStatus,
@@ -30,29 +34,10 @@ router.get("/users", (_request, response) => {
 
 router.get("/tickets", (request, response) => {
   const database: Database = readDatabase();
-  let tickets: Ticket[] = database.tickets;
-
-  if (typeof request.query.status === "string") {
-    tickets = tickets.filter(
-      (ticket) => ticket.status === request.query.status,
-    );
-  }
-
-  if (typeof request.query.category === "string") {
-    tickets = tickets.filter(
-      (ticket) => ticket.category === request.query.category,
-    );
-  }
-
-  if (typeof request.query.search === "string") {
-    const search = request.query.search.toLowerCase();
-    tickets = tickets.filter(
-      (ticket) =>
-        ticket.title.toLowerCase().includes(search) ||
-        ticket.description.toLowerCase().includes(search) ||
-        ticket.category.toLowerCase().includes(search),
-    );
-  }
+  const tickets = filterTickets(
+    database.tickets,
+    parseTicketFilters(request.query),
+  );
 
   const result = tickets.map((ticket) =>
     enrichTicketForList(database, ticket),
