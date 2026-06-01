@@ -4,9 +4,9 @@ import type { Controller } from "../../domain/controller.js";
 import { parseTicketFilters } from "./utils/filter-tickets.js";
 import type { TicketsService } from "./tickets.service.js";
 
-function getRouteParam(value: string | string[]): string {
-  return typeof value === "string" ? value : value[0];
-}
+type TicketRouteParams = {
+  id: string;
+};
 
 export class TicketsController implements Controller {
   constructor(private readonly ticketsService: TicketsService) {}
@@ -25,14 +25,13 @@ export class TicketsController implements Controller {
       .json(this.ticketsService.summary());
   }
 
-  show(request: Request, response: Response): void {
+  show(
+    request: Request<TicketRouteParams>,
+    response: Response,
+  ): void {
     response
       .status(HttpStatus.OK)
-      .json(
-        this.ticketsService.findById(
-          getRouteParam(request.params.id),
-        ),
-      );
+      .json(this.ticketsService.findById(request.params.id));
   }
 
   store(request: Request, response: Response): void {
@@ -41,9 +40,12 @@ export class TicketsController implements Controller {
     response.status(HttpStatus.CREATED).json(ticket);
   }
 
-  updateStatus(request: Request, response: Response): void {
+  updateStatus(
+    request: Request<TicketRouteParams>,
+    response: Response,
+  ): void {
     const ticket = this.ticketsService.updateStatus({
-      ticketId: getRouteParam(request.params.id),
+      ticketId: request.params.id,
       status: request.body.status,
       comment: request.body.comment,
       authorId: request.body.authorId,
@@ -52,9 +54,12 @@ export class TicketsController implements Controller {
     response.status(HttpStatus.OK).json(ticket);
   }
 
-  storeComment(request: Request, response: Response): void {
+  storeComment(
+    request: Request<TicketRouteParams>,
+    response: Response,
+  ): void {
     const comment = this.ticketsService.addComment({
-      ticketId: getRouteParam(request.params.id),
+      ticketId: request.params.id,
       message: request.body.message,
       authorId: request.body.authorId,
     });
