@@ -1,26 +1,28 @@
 import { Router, type Request, type Response } from "express";
 import { TicketController } from "../controllers/ticket-controller.js";
+import { TicketService } from "../services/ticket-service.js";
 
 const router = Router();
-const controller = new TicketController();
+const service = new TicketService();
+const controller = new TicketController(service);
 
-router.get("/", (request, response) =>
+router.get("/", (request: Request, response: Response) =>
   controller.index(request, response),
 );
 
-router.get("/summary", (request, response) =>
+router.get("/summary", (request: Request, response: Response) =>
   controller.summary(request, response),
 );
 
-router.get("/:id", (request, response) =>
+router.get("/:id", (request: Request, response: Response) =>
   controller.show(request, response),
 );
 
-router.post("/", (request, response) =>
+router.post("/", (request: Request, response: Response) =>
   controller.store(request, response),
 );
 
-router.patch("/:id/status", (request, response) =>
+router.patch("/:id/status", (request: Request, response: Response) =>
   controller.updateStatus(request, response),
 );
 

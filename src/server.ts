@@ -1,6 +1,7 @@
 import cors from "cors";
 import express, { Application, json } from "express";
 import { env } from "./config/env.js";
+import { apiErrorHandler } from "./http/error-handler.js";
 import { router } from "./routes/index.js";
 import { notFoundFallback } from "./routes/fallbacks.js";
 
@@ -23,6 +24,7 @@ export class App {
   routes() {
     this.app.use("/api", router);
     this.app.use(notFoundFallback);
+    this.app.use(apiErrorHandler);
   }
 
   listen() {
