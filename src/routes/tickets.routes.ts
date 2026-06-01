@@ -2,39 +2,29 @@ import { Router } from "express";
 import {
   readDatabase,
   writeDatabase,
-} from "./database/jsonDatabase.js";
-import { calculatePriority } from "./domain/calculate-priority.js";
+} from "../database/jsonDatabase.js";
+import { calculatePriority } from "../domain/calculate-priority.js";
 import {
   enrichTicketForList,
   enrichTicketWithComments,
-} from "./domain/enrich-ticket.js";
+} from "../domain/enrich-ticket.js";
 import {
   filterTickets,
   parseTicketFilters,
-} from "./domain/filter-tickets.js";
-import { findUserById } from "./domain/find-user-by-id.js";
+} from "../domain/filter-tickets.js";
+import { findUserById } from "../domain/find-user-by-id.js";
 import {
   isValidTicketStatus,
   TICKET_STATUSES,
-} from "./domain/ticket-status.js";
-import { buildTicketSummary } from "./domain/ticket-summary.js";
-import { BadRequest, NotFound } from "./http/api-error.js";
-import type { Database, Ticket } from "./types.js";
-import { generateId } from "./utils/generate-id.js";
+} from "../domain/ticket-status.js";
+import { buildTicketSummary } from "../domain/ticket-summary.js";
+import { BadRequest, NotFound } from "../http/api-error.js";
+import type { Database, Ticket } from "../types.js";
+import { generateId } from "../utils/generate-id.js";
 
 const router = Router();
 
-router.get("/health", (_request, response) => {
-  response.json({ status: "ok", service: "oxetech-helpdesk" });
-});
-
-router.get("/users", (_request, response) => {
-  const database: Database = readDatabase();
-
-  response.json(database.users);
-});
-
-router.get("/tickets", (request, response) => {
+router.get("/", (request, response) => {
   const database: Database = readDatabase();
   const tickets = filterTickets(
     database.tickets,
@@ -48,13 +38,13 @@ router.get("/tickets", (request, response) => {
   response.json(result);
 });
 
-router.get("/tickets/summary", (_request, response) => {
+router.get("/summary", (_request, response) => {
   const database: Database = readDatabase();
 
   response.json(buildTicketSummary(database.tickets));
 });
 
-router.get("/tickets/:id", (request, response) => {
+router.get("/:id", (request, response) => {
   const database: Database = readDatabase();
   const ticket = database.tickets.find(
     (item) => item.id === request.params.id,
@@ -70,7 +60,7 @@ router.get("/tickets/:id", (request, response) => {
   response.json(enrichTicketWithComments(database, ticket));
 });
 
-router.post("/tickets", (request, response) => {
+router.post("/", (request, response) => {
   const database: Database = readDatabase();
   const body = request.body;
 
@@ -113,7 +103,7 @@ router.post("/tickets", (request, response) => {
   response.status(201).json(ticket);
 });
 
-router.patch("/tickets/:id/status", (request, response) => {
+router.patch("/:id/status", (request, response) => {
   const database: Database = readDatabase();
   const ticket = database.tickets.find(
     (item) => item.id === request.params.id,
@@ -161,7 +151,7 @@ router.patch("/tickets/:id/status", (request, response) => {
   response.json(ticket);
 });
 
-router.post("/tickets/:id/comments", (request, response) => {
+router.post("/:id/comments", (request, response) => {
   const database: Database = readDatabase();
   const ticket = database.tickets.find(
     (item) => item.id === request.params.id,
