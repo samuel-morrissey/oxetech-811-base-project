@@ -18,6 +18,7 @@ import {
   TICKET_STATUSES,
 } from "./domain/ticket-status.js";
 import { buildTicketSummary } from "./domain/ticket-summary.js";
+import { BadRequest, NotFound } from "./http/api-error.js";
 import type { Database, Ticket } from "./types.js";
 import { generateId } from "./utils/generate-id.js";
 
@@ -60,10 +61,9 @@ router.get("/tickets/:id", (request, response) => {
   );
 
   if (!ticket) {
-    response.status(404).json({
-      error: "Ticket nao encontrado",
+    new NotFound("Ticket nao encontrado", {
       id: request.params.id,
-    });
+    }).send(response);
     return;
   }
 
@@ -80,17 +80,16 @@ router.post("/tickets", (request, response) => {
     !body.category ||
     !body.requesterId
   ) {
-    response.status(400).json({
-      message: "Campos obrigatorios ausentes",
+    new BadRequest("Campos obrigatorios ausentes", {
       required: ["title", "description", "category", "requesterId"],
       received: body,
-    });
+    }).send(response);
     return;
   }
 
   const user = findUserById(database, body.requesterId);
   if (!user) {
-    response.status(400).json({ message: "Solicitante invalido" });
+    new BadRequest("Solicitante invalido").send(response);
     return;
   }
 
@@ -122,7 +121,7 @@ router.patch("/tickets/:id/status", (request, response) => {
   const rawStatus = request.body.status;
 
   if (!ticket) {
-    response.status(404).json({ message: "Ticket nao encontrado" });
+    new NotFound("Ticket nao encontrado").send(response);
     return;
   }
 
@@ -130,19 +129,18 @@ router.patch("/tickets/:id/status", (request, response) => {
     typeof rawStatus !== "string" ||
     !isValidTicketStatus(rawStatus)
   ) {
-    response.status(400).json({
-      message: "Status invalido",
+    new BadRequest("Status invalido", {
       allowed: [...TICKET_STATUSES],
-    });
+    }).send(response);
     return;
   }
 
   const newStatus = rawStatus;
 
   if (newStatus === "closed" && !request.body.comment) {
-    response.status(400).json({
-      message: "Informe um comentario para fechar o chamado",
-    });
+    new BadRequest(
+      "Informe um comentario para fechar o chamado",
+    ).send(response);
     return;
   }
 
@@ -171,14 +169,14 @@ router.post("/tickets/:id/comments", (request, response) => {
   const body = request.body;
 
   if (!ticket) {
-    response.status(404).json({ error: "Ticket nao encontrado" });
+    new NotFound("Ticket nao encontrado").send(response);
     return;
   }
 
   if (!body.message || !body.authorId) {
-    response
-      .status(400)
-      .json({ error: "Comentario e autor sao obrigatorios" });
+    new BadRequest("Comentario e autor sao obrigatorios").send(
+      response,
+    );
     return;
   }
 
