@@ -1,9 +1,12 @@
-import { Router } from "express";
+import { Router, type Request, type Response } from "express";
+import { HttpStatus } from "../http/http-status.js";
 
 const router = Router();
 
-router.get("/", (_request, response) => {
-  response.json({ status: "ok", service: "oxetech-helpdesk" });
-});
+router.get("/", (_request: Request, response: Response) =>
+  response
+    .status(HttpStatus.OK)
+    .json({ status: "ok", service: "oxetech-helpdesk" }),
+);
 
-export default router;
+export { router as healthRouter };

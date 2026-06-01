@@ -185,4 +185,4 @@ router.post("/:id/comments", (request, response) => {
   response.status(201).json(comment);
 });
 
-export default router;
+export { router as ticketsRouter };
