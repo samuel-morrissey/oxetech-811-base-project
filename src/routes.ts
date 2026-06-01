@@ -1,20 +1,11 @@
 import { Router } from "express";
-import fs from "node:fs";
-import path from "node:path";
-import type { Database, Ticket, TicketPriority, TicketStatus } from "./types";
+import { readDatabase, writeDatabase } from "./database";
+import { VALID_STATUSES, type Database, type Ticket, type TicketPriority, type TicketStatus } from "./types";
+import { findAllTickets, findTicketById, saveTicket, updateTicket } from "./ticketRepository";
+import { findAllUsers, findUserById } from "./userRepository";
 
 const router = Router();
-const dataFile = process.env.DATA_FILE || "data/db.json";
-const databasePath = path.resolve(process.cwd(), dataFile);
-
-function readDatabase(): Database {
-  const content = fs.readFileSync(databasePath, "utf-8");
-  return JSON.parse(content) as Database;
-}
-
-function writeDatabase(database: Database) {
-  fs.writeFileSync(databasePath, JSON.stringify(database, null, 2));
-}
+const DESCRIPTION_LENGTH_HIGH_PRIORITY = 220;
 
 function generateId(prefix: string) {
   return `${prefix}_${Date.now()}_${Math.floor(Math.random() * 10000)}`;
@@ -25,7 +16,7 @@ function calculatePriority(category: string, description: string): TicketPriorit
     return "urgent";
   }
 
-  if (category === "sistemas" || description.length > 220) {
+  if (category === "sistemas" || description.length > DESCRIPTION_LENGTH_HIGH_PRIORITY) {
     return "high";
   }
 
@@ -41,9 +32,7 @@ router.get("/health", (_request, response) => {
 });
 
 router.get("/users", (_request, response) => {
-  const database = readDatabase();
-
-  response.json(database.users);
+  response.json(findAllUsers());
 });
 
 router.get("/tickets", (request, response) => {
@@ -69,8 +58,8 @@ router.get("/tickets", (request, response) => {
   }
 
   const result = tickets.map((ticket) => {
-    const requester = database.users.find((user) => user.id === ticket.requesterId);
-    const assigned = database.users.find((user) => user.id === ticket.assignedToId);
+    const requester = findUserById(ticket.requesterId);
+    const assigned = ticket.assignedToId ? findUserById(ticket.assignedToId) : undefined;
     const comments = database.comments.filter((comment) => comment.ticketId === ticket.id);
 
     return {
@@ -107,15 +96,15 @@ router.get("/tickets/summary", (_request, response) => {
 
 router.get("/tickets/:id", (request, response) => {
   const database = readDatabase();
-  const ticket = database.tickets.find((item) => item.id === request.params.id);
+  const ticket = findTicketById(request.params.id);
 
   if (!ticket) {
     response.status(404).json({ error: "Ticket nao encontrado", id: request.params.id });
     return;
   }
 
-  const requester = database.users.find((user) => user.id === ticket.requesterId);
-  const assigned = database.users.find((user) => user.id === ticket.assignedToId);
+  const requester = findUserById(ticket.requesterId);
+  const assigned = ticket.assignedToId ? findUserById(ticket.assignedToId) : undefined;
   const comments = database.comments
     .filter((comment) => comment.ticketId === ticket.id)
     .map((comment) => ({
@@ -159,8 +148,7 @@ router.post("/tickets", (request, response) => {
     updatedAt: now,
   };
 
-  database.tickets.push(ticket);
-  writeDatabase(database);
+  saveTicket(ticket);
 
   response.status(201).json(ticket);
 });
@@ -175,8 +163,8 @@ router.patch("/tickets/:id/status", (request, response) => {
     return;
   }
 
-  if (!["open", "in_progress", "resolved", "closed"].includes(newStatus)) {
-    response.status(400).json({ message: "Status invalido", allowed: ["open", "in_progress", "resolved", "closed"] });
+  if (!VALID_STATUSES.includes(newStatus)) {
+    response.status(400).json({ message: "Status invalido", allowed: VALID_STATUSES });
     return;
   }
 
