@@ -1,4 +1,5 @@
 import type { Response } from "express";
+import { HttpStatus } from "./http-status.js";
 
 export type ErrorDetailsValue =
   | string
@@ -49,12 +50,12 @@ export class ApiError extends Error {
 
 export class NotFound extends ApiError {
   constructor(message: string, details?: ErrorDetails) {
-    super(message, 404, details);
+    super(message, HttpStatus.NOT_FOUND, details);
   }
 }
 
 export class BadRequest extends ApiError {
   constructor(message: string, details?: ErrorDetails) {
-    super(message, 400, details);
+    super(message, HttpStatus.BAD_REQUEST, details);
   }
 }

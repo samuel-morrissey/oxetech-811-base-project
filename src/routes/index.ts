@@ -9,4 +9,4 @@ router.use("/health", healthRouter);
 router.use("/users", usersRouter);
 router.use("/tickets", ticketsRouter);
 
-export default router;
+export { router };
