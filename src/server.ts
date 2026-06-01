@@ -1,10 +1,10 @@
 import cors from "cors";
 import express from "express";
-import "dotenv/config";
+import { env } from "./config/env.js";
 import router from "./routes/index.js";
 
 const app = express();
-const port = Number(process.env.PORT || 3000);
+const port = env.PORT;
 
 app.use(cors());
 app.use(express.json());

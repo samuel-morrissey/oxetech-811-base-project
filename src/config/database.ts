@@ -1,4 +1,7 @@
 import path from "node:path";
+import { env } from "./env.js";
 
-export const DATA_FILE = process.env.DATA_FILE || "data/db.json";
-export const DATABASE_PATH = path.resolve(process.cwd(), DATA_FILE);
+export const DATABASE_PATH = path.resolve(
+  process.cwd(),
+  env.DATA_FILE,
+);
