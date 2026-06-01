@@ -130,3 +130,5 @@ Em cada PR, registre:
 - quais limitacoes continuam existindo.
 
 Consulte [docs/CHECKPOINTS.md](docs/CHECKPOINTS.md) para entender o escopo esperado de cada entrega.
+
+Para validar manualmente a API apos as refatoracoes, use [docs/VALIDACAO-MANUAL-A1.md](docs/VALIDACAO-MANUAL-A1.md).
