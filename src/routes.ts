@@ -108,6 +108,35 @@ function sendFacadeResult<T>(response: Response, result: FacadeResult<T>) {
   response.status(result.status).json(result.data);
 }
 
+function validateTicketBodyValid(body: {
+  title: string;
+  description: string;
+  category: string;
+  requesterId: string;
+  assignedToId?: string;
+}): boolean {
+  return Boolean(body.title && body.description && body.category && body.requesterId);
+}
+
+function requiredFieldsMissingResponse(body: {
+  title?: string;
+  description?: string;
+  category?: string;
+  requesterId?: string;
+  assignedToId?: string;
+}): FacadeResult<Ticket> {
+  return { ok: false, status: 400, body: { message: "Campos obrigatorios ausentes", required: ["title", "description", "category", "requesterId"], received: body } };
+}
+
+function findUserByIdOrFail(users: User[], id?: string): User | FacadeResult<User> {
+  const user = users.find((user) => user.id === id);
+  if (!user) {
+    return { ok: false, status: 400, body: { message: "Usuario nao encontrado", id } };
+  }
+  return user;
+}
+
+
 const helpdeskFacade = {
   listUsers(): FacadeResult<User[]> {
     const database = readDatabase();
@@ -181,30 +210,19 @@ const helpdeskFacade = {
   },
 
   createTicket(body: {
-    title?: string;
-    description?: string;
-    category?: string;
-    requesterId?: string;
+    title: string;
+    description: string;
+    category: string;
+    requesterId: string;
     assignedToId?: string;
   }): FacadeResult<Ticket> {
     const database = readDatabase();
 
-    if (!body.title || !body.description || !body.category || !body.requesterId) {
-      return {
-        ok: false,
-        status: 400,
-        body: {
-          message: "Campos obrigatorios ausentes",
-          required: ["title", "description", "category", "requesterId"],
-          received: body,
-        },
-      };
+    if (!validateTicketBodyValid(body)) {
+      return requiredFieldsMissingResponse(body);
     }
 
-    const user = database.users.find((item) => item.id === body.requesterId);
-    if (!user) {
-      return { ok: false, status: 400, body: { message: "Solicitante invalido" } };
-    }
+    const user = findUserByIdOrFail(database.users, body.requesterId);
 
     const now = new Date().toISOString();
     const ticket: Ticket = {
