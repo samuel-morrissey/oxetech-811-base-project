@@ -108,7 +108,7 @@ function sendFacadeResult<T>(response: Response, result: FacadeResult<T>) {
   response.status(result.status).json(result.data);
 }
 
-function validateTicketBodyValid(body: {
+function hasRequiredTicketFields(body: {
   title: string;
   description: string;
   category: string;
@@ -128,10 +128,10 @@ function requiredFieldsMissingResponse(body: {
   return { ok: false, status: 400, body: { message: "Campos obrigatorios ausentes", required: ["title", "description", "category", "requesterId"], received: body } };
 }
 
-function findUserByIdOrFail(users: User[], id?: string): null | FacadeResult<User> {
-  const user = users.find((user) => user.id === id);
-  if (!user) {
-    return { ok: false, status: 400, body: { message: "Usuario nao encontrado", id } };
+function findRequesterOrFail(users: User[], id?: string): FacadeResult<never> | null {
+  const requester = users.find((user) => user.id === id);
+  if (!requester) {
+    return { ok: false, status: 400, body: { message: "Solicitante invalido" } };
   }
   return null;
 }
@@ -158,7 +158,7 @@ function buildNewTicket(body: {
   };
 }
 
-function sucessfulCreatedResponse <T>(data: T): FacadeResult<T> {
+function successfulCreatedResponse<T>(data: T): FacadeResult<T> {
   return { ok: true, status: 201, data };
 }
 
@@ -243,18 +243,21 @@ const helpdeskFacade = {
   }): FacadeResult<Ticket> {
     const database = readDatabase();
 
-    if (!validateTicketBodyValid(body)) {
+    if (!hasRequiredTicketFields(body)) {
       return requiredFieldsMissingResponse(body);
     }
 
-    findUserByIdOrFail(database.users, body.requesterId);
+    const requesterError = findRequesterOrFail(database.users, body.requesterId);
+    if (requesterError) {
+      return requesterError;
+    }
 
     const newTicket: Ticket = buildNewTicket(body);
-    
+
     database.tickets.push(newTicket);
     writeDatabase(database);
 
-    return sucessfulCreatedResponse(newTicket);
+    return successfulCreatedResponse(newTicket);
   },
 
   updateTicketStatus(
