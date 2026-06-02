@@ -1,0 +1,103 @@
+### Teste de Endpoints - Helpdesk API
+### Roteiro de Validação Manual
+
+### 1. GET /health - Health Check
+GET http://localhost:3000/health
+
+### 2. GET /users - Listar todos os usuários
+GET http://localhost:3000/users
+
+### 3. GET /tickets/summary - Resumo de tickets
+GET http://localhost:3000/tickets/summary
+
+### 4. GET /tickets - Listar tickets com filtros
+GET http://localhost:3000/tickets
+
+### 4.1 GET /tickets - Filtro por status
+GET http://localhost:3000/tickets?status=open
+
+### 4.2 GET /tickets - Filtro por categoria
+GET http://localhost:3000/tickets?category=infra
+
+### 4.3 GET /tickets - Busca por texto
+GET http://localhost:3000/tickets?search=urgente
+
+### 5. POST /tickets - Criar ticket
+POST http://localhost:3000/tickets
+Content-Type: application/json
+
+{
+  "title": "Servidor down",
+  "description": "O servidor de produção está offline e urgente",
+  "category": "infra",
+  "requesterId": "user_1735689600000_1234"
+}
+
+### 6. GET /tickets/:id - Obter detalhes do ticket
+GET http://localhost:3000/tickets/ticket_1735689600000_1234
+
+### 7. PATCH /tickets/:id/status - Atualizar status do ticket
+PATCH http://localhost:3000/tickets/ticket_1735689600000_1234/status
+Content-Type: application/json
+
+{
+  "status": "in_progress",
+  "comment": "Começando a investigar o problema",
+  "authorId": "user_1735689600000_1234"
+}
+
+### 8. PATCH /tickets/:id/status - Fechar ticket com comentário obrigatório
+PATCH http://localhost:3000/tickets/ticket_1735689600000_1234/status
+Content-Type: application/json
+
+{
+  "status": "closed",
+  "comment": "Problema resolvido. Servidor reiniciado.",
+  "authorId": "user_1735689600000_1234"
+}
+
+### 9. POST /tickets/:id/comments - Adicionar comentário
+POST http://localhost:3000/tickets/ticket_1735689600000_1234/comments
+Content-Type: application/json
+
+{
+  "message": "Adicionando mais detalhes sobre a solução",
+  "authorId": "user_1735689600000_1234"
+}
+
+### 10. Testes de Erro - GET /tickets/:id com ID inválido
+GET http://localhost:3000/tickets/invalid_id
+
+### 11. Testes de Erro - POST /tickets sem campos obrigatórios
+POST http://localhost:3000/tickets
+Content-Type: application/json
+
+{
+  "title": "Ticket incompleto"
+}
+
+### 12. Testes de Erro - PATCH /tickets/:id/status com status inválido
+PATCH http://localhost:3000/tickets/ticket_1735689600000_1234/status
+Content-Type: application/json
+
+{
+  "status": "invalid_status",
+  "comment": "teste"
+}
+
+### 13. Testes de Erro - PATCH /tickets/:id/status fechar sem comentário
+PATCH http://localhost:3000/tickets/ticket_1735689600000_1234/status
+Content-Type: application/json
+
+{
+  "status": "closed"
+}
+
+### 14. Testes de Erro - POST /tickets/:id/comments sem campos obrigatórios
+POST http://localhost:3000/tickets/ticket_1735689600000_1234/comments
+Content-Type: application/json
+
+{
+  "message": "Apenas mensagem sem autor"
+}
+
