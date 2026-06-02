@@ -38,3 +38,55 @@ export interface Database {
   tickets: Ticket[];
   comments: TicketComment[];
 }
+
+export interface TicketListFilters {
+  status?: string;
+  category?: string;
+  search?: string;
+}
+
+export interface TicketListItem extends Ticket {
+  requester?: User;
+  assigned?: User;
+  commentsCount: number;
+}
+
+export interface TicketCommentWithAuthor extends TicketComment {
+  author?: User;
+}
+
+export interface TicketDetail extends Ticket {
+  requester?: User;
+  assigned?: User;
+  comments: TicketCommentWithAuthor[];
+}
+
+export type CreateTicketErrorCode = "invalid_requester";
+
+export interface CreateTicketError {
+  code: CreateTicketErrorCode;
+}
+
+export type CreateTicketResult =
+  | { success: true; ticket: Ticket }
+  | { success: false; error: CreateTicketError };
+
+export type UpdateTicketStatusErrorCode = "not_found" | "comment_required_to_close";
+
+export interface UpdateTicketStatusError {
+  code: UpdateTicketStatusErrorCode;
+}
+
+export type UpdateTicketStatusResult =
+  | { success: true; ticket: Ticket }
+  | { success: false; error: UpdateTicketStatusError };
+
+export type AddTicketCommentErrorCode = "not_found";
+
+export interface AddTicketCommentError {
+  code: AddTicketCommentErrorCode;
+}
+
+export type AddTicketCommentResult =
+  | { success: true; comment: TicketComment }
+  | { success: false; error: AddTicketCommentError };
