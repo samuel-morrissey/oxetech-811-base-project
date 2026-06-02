@@ -283,6 +283,31 @@ function addCommentIfProvided(
   }
 }
 
+function hasRequiredCommentFields(body: {
+  message?: string;
+  authorId?: string;
+}): boolean {
+  return Boolean(body.message && body.authorId);
+}
+
+function missingCommentFieldsResponse(): FacadeResult<TicketComment> {
+  return {
+    ok: false,
+    status: 400,
+    body: { error: "Comentario e autor sao obrigatorios" },
+  };
+}
+
+function buildComment(ticketId: string, message: string, authorId: string): TicketComment {
+  return {
+    id: generateId("comment"),
+    ticketId,
+    authorId,
+    message,
+    createdAt: new Date().toISOString(),
+  };
+}
+
 const helpdeskFacade = {
   listUsers(): FacadeResult<User[]> {
     const database = readDatabase();
@@ -388,29 +413,23 @@ const helpdeskFacade = {
     body: { message?: string; authorId?: string },
   ): FacadeResult<TicketComment> {
     const database = readDatabase();
-    const ticket = database.tickets.find((item) => item.id === id);
+    const ticket = findTicketById(database.tickets, id);
 
     if (!ticket) {
       return { ok: false, status: 404, body: { error: "Ticket nao encontrado" } };
     }
 
-    if (!body.message || !body.authorId) {
-      return { ok: false, status: 400, body: { error: "Comentario e autor sao obrigatorios" } };
+    if (!hasRequiredCommentFields(body)) {
+      return missingCommentFieldsResponse();
     }
 
-    const comment: TicketComment = {
-      id: generateId("comment"),
-      ticketId: ticket.id,
-      authorId: body.authorId,
-      message: body.message,
-      createdAt: new Date().toISOString(),
-    };
+    const comment = buildComment(ticket.id, body.message as string, body.authorId as string);
 
     database.comments.push(comment);
     ticket.updatedAt = new Date().toISOString();
     writeDatabase(database);
 
-    return { ok: true, status: 201, data: comment };
+    return successfulCreatedResponse(comment);
   },
 };
 
