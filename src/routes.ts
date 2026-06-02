@@ -222,6 +222,18 @@ function countTicketsByPriority(tickets: Ticket[]): number {
   return tickets.filter((ticket) => ticket.priority === "urgent").length;
 }
 
+function findTicketById(tickets: Ticket[], id: string): Ticket | undefined {
+  return tickets.find((item) => item.id === id);
+}
+
+function ticketNotFoundResponse(id: string): FacadeResult<TicketDetail> {
+  return {
+    ok: false,
+    status: 404,
+    body: { error: "Ticket nao encontrado", id },
+  };
+}
+
 
 const helpdeskFacade = {
   listUsers(): FacadeResult<User[]> {
@@ -261,17 +273,14 @@ const helpdeskFacade = {
 
   getTicketById(id: string): FacadeResult<TicketDetail> {
     const database = readDatabase();
-    const ticket = database.tickets.find((item) => item.id === id);
+    const ticket = findTicketById(database.tickets, id);
 
     if (!ticket) {
-      return {
-        ok: false,
-        status: 404,
-        body: { error: "Ticket nao encontrado", id },
-      };
+      return ticketNotFoundResponse(id);
     }
 
-    return { ok: true, status: 200, data: enrichTicketDetail(database, ticket) };
+    const detail = enrichTicketDetail(database, ticket);
+    return successfulOkResponse(detail);
   },
 
   createTicket(body: {
