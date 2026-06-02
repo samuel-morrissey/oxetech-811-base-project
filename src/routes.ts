@@ -234,6 +234,54 @@ function ticketNotFoundResponse(id: string): FacadeResult<TicketDetail> {
   };
 }
 
+function isValidStatus(status: unknown): status is TicketStatus {
+  return ["open", "in_progress", "resolved", "closed"].includes(String(status));
+}
+
+function invalidStatusResponse(): FacadeResult<Ticket> {
+  return {
+    ok: false,
+    status: 400,
+    body: {
+      message: "Status invalido",
+      allowed: ["open", "in_progress", "resolved", "closed"],
+    },
+  };
+}
+
+function requiresCommentForClosed(status: TicketStatus, comment?: string): boolean {
+  return status === "closed" && !comment;
+}
+
+function missingCommentForClosedResponse(): FacadeResult<Ticket> {
+  return {
+    ok: false,
+    status: 400,
+    body: { message: "Informe um comentario para fechar o chamado" },
+  };
+}
+
+function updateTicketWithStatus(ticket: Ticket, status: TicketStatus): void {
+  ticket.status = status;
+  ticket.updatedAt = new Date().toISOString();
+}
+
+function addCommentIfProvided(
+  database: Database,
+  ticket: Ticket,
+  comment?: string,
+  authorId?: string,
+): void {
+  if (comment) {
+    database.comments.push({
+      id: generateId("comment"),
+      ticketId: ticket.id,
+      authorId: authorId || ticket.requesterId,
+      message: comment,
+      createdAt: new Date().toISOString(),
+    });
+  }
+}
 
 const helpdeskFacade = {
   listUsers(): FacadeResult<User[]> {
@@ -314,47 +362,25 @@ const helpdeskFacade = {
     body: { status?: TicketStatus; comment?: string; authorId?: string },
   ): FacadeResult<Ticket> {
     const database = readDatabase();
-    const ticket = database.tickets.find((item) => item.id === id);
-    const newStatus = body.status as TicketStatus;
+    const ticket = findTicketById(database.tickets, id);
 
     if (!ticket) {
       return { ok: false, status: 404, body: { message: "Ticket nao encontrado" } };
     }
 
-    if (!["open", "in_progress", "resolved", "closed"].includes(newStatus)) {
-      return {
-        ok: false,
-        status: 400,
-        body: {
-          message: "Status invalido",
-          allowed: ["open", "in_progress", "resolved", "closed"],
-        },
-      };
+    if (!isValidStatus(body.status)) {
+      return invalidStatusResponse();
     }
 
-    if (newStatus === "closed" && !body.comment) {
-      return {
-        ok: false,
-        status: 400,
-        body: { message: "Informe um comentario para fechar o chamado" },
-      };
+    if (requiresCommentForClosed(body.status, body.comment)) {
+      return missingCommentForClosedResponse();
     }
 
-    ticket.status = newStatus;
-    ticket.updatedAt = new Date().toISOString();
-
-    if (body.comment) {
-      database.comments.push({
-        id: generateId("comment"),
-        ticketId: ticket.id,
-        authorId: body.authorId || ticket.requesterId,
-        message: body.comment,
-        createdAt: new Date().toISOString(),
-      });
-    }
+    updateTicketWithStatus(ticket, body.status);
+    addCommentIfProvided(database, ticket, body.comment, body.authorId);
 
     writeDatabase(database);
-    return { ok: true, status: 200, data: ticket };
+    return successfulOkResponse(ticket);
   },
 
   addComment(
