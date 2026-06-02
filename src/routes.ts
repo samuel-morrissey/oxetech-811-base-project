@@ -162,6 +162,42 @@ function successfulCreatedResponse<T>(data: T): FacadeResult<T> {
   return { ok: true, status: 201, data };
 }
 
+function successfulOkResponse<T>(data: T): FacadeResult<T> {
+  return { ok: true, status: 200, data };
+}
+
+function filterTicketsByStatusAndCategory(
+  tickets: Ticket[],
+  query: { status?: unknown; category?: unknown },
+): Ticket[] {
+  let filteredTickets = tickets;
+
+  if (query.status) {
+    filteredTickets = filteredTickets.filter((ticket) => ticket.status === query.status);
+  }
+
+  if (query.category) {
+    filteredTickets = filteredTickets.filter((ticket) => ticket.category === query.category);
+  }
+
+  return filteredTickets;
+}
+
+function filterTicketsBySearch(tickets: Ticket[], search: string): Ticket[] {
+  const normalizedSearch = search.toLowerCase();
+
+  return tickets.filter(
+    (ticket) =>
+      ticket.title.toLowerCase().includes(normalizedSearch) ||
+      ticket.description.toLowerCase().includes(normalizedSearch) ||
+      ticket.category.toLowerCase().includes(normalizedSearch),
+  );
+}
+
+function buildEnrichedTicketList(database: Database, tickets: Ticket[]): TicketListItem[] {
+  return tickets.map((ticket) => enrichTicketListItem(database, ticket));
+}
+
 const helpdeskFacade = {
   listUsers(): FacadeResult<User[]> {
     const database = readDatabase();
@@ -174,28 +210,15 @@ const helpdeskFacade = {
     search?: unknown;
   }): FacadeResult<TicketListItem[]> {
     const database = readDatabase();
-    let tickets = database.tickets;
-
-    if (query.status) {
-      tickets = tickets.filter((ticket) => ticket.status === query.status);
-    }
-
-    if (query.category) {
-      tickets = tickets.filter((ticket) => ticket.category === query.category);
-    }
+    let filteredTickets = filterTicketsByStatusAndCategory(database.tickets, query);
 
     if (query.search) {
-      const search = String(query.search).toLowerCase();
-      tickets = tickets.filter(
-        (ticket) =>
-          ticket.title.toLowerCase().includes(search) ||
-          ticket.description.toLowerCase().includes(search) ||
-          ticket.category.toLowerCase().includes(search),
-      );
+      filteredTickets = filterTicketsBySearch(filteredTickets, String(query.search));
     }
 
-    const data = tickets.map((ticket) => enrichTicketListItem(database, ticket));
-    return { ok: true, status: 200, data };
+    const ticketList = buildEnrichedTicketList(database, filteredTickets);
+
+    return successfulOkResponse(ticketList);
   },
 
   getTicketsSummary(): FacadeResult<TicketsSummary> {
