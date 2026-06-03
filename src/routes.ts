@@ -7,21 +7,61 @@ const router = Router();
 const dataFile = process.env.DATA_FILE || "data/db.json";
 const databasePath = path.resolve(process.cwd(), dataFile);
 
+// Refatoração: centraliza os status permitidos em uma constante.
+// Antes, essa lista ficava diretamente dentro do handler de atualização de status.
+const ALLOWED_TICKET_STATUSES: TicketStatus[] = ["open", "in_progress", "resolved", "closed"];
+
+// Refatoração: centraliza os campos obrigatórios para criação de chamados.
+// Isso evita repetição e deixa mais claro qual é o contrato mínimo do POST /tickets.
+const REQUIRED_TICKET_FIELDS = ["title", "description", "category", "requesterId"] as const;
+
 function readDatabase(): Database {
   const content = fs.readFileSync(databasePath, "utf-8");
   return JSON.parse(content) as Database;
 }
 
-function writeDatabase(database: Database) {
+// Refatoração: declara explicitamente o retorno void.
+// A função apenas persiste dados no arquivo, sem retornar valor para o chamador.
+function writeDatabase(database: Database): void {
   fs.writeFileSync(databasePath, JSON.stringify(database, null, 2));
 }
 
-function generateId(prefix: string) {
+// Refatoração: declara explicitamente o retorno string.
+// Isso melhora a legibilidade e deixa claro o contrato da função.
+function generateId(prefix: string): string {
   return `${prefix}_${Date.now()}_${Math.floor(Math.random() * 10000)}`;
 }
 
+// Refatoração: centraliza a geração da data atual em ISO.
+// Antes, new Date().toISOString() era chamado diretamente em vários pontos.
+function getCurrentIsoDate(): string {
+  return new Date().toISOString();
+}
+
+// Refatoração: extrai a busca de chamado por ID para uma função reutilizável.
+// A mesma lógica era necessária em mais de uma rota.
+function findTicketById(database: Database, ticketId: string): Ticket | undefined {
+  return database.tickets.find((ticket) => ticket.id === ticketId);
+}
+
+// Refatoração: extrai a validação de campos obrigatórios do corpo da requisição.
+// Isso reduz a responsabilidade direta do handler POST /tickets.
+function hasRequiredTicketFields(body: Record<string, unknown>): boolean {
+  return REQUIRED_TICKET_FIELDS.every((field) => Boolean(body[field]));
+}
+
+// Refatoração: cria um type guard para validar status.
+// Além de validar o valor recebido, ajuda o TypeScript a reconhecer o tipo TicketStatus.
+function isValidTicketStatus(status: string): status is TicketStatus {
+  return ALLOWED_TICKET_STATUSES.includes(status as TicketStatus);
+}
+
 function calculatePriority(category: string, description: string): TicketPriority {
-  if (category === "infra" || description.toLowerCase().includes("urgente")) {
+  // Refatoração: normaliza a descrição uma única vez.
+  // Antes, a transformação para minúsculas era feita diretamente dentro da condição.
+  const normalizedDescription = description.toLowerCase();
+
+  if (category === "infra" || normalizedDescription.includes("urgente")) {
     return "urgent";
   }
 
@@ -36,6 +76,63 @@ function calculatePriority(category: string, description: string): TicketPriorit
   return "low";
 }
 
+// Refatoração: extrai a lógica de filtros da rota GET /tickets.
+// O handler fica mais simples e a regra de filtragem passa a ter uma função dedicada.
+function filterTickets(tickets: Ticket[], query: Record<string, unknown>): Ticket[] {
+  let filteredTickets = tickets;
+
+  if (query.status) {
+    filteredTickets = filteredTickets.filter((ticket) => ticket.status === query.status);
+  }
+
+  if (query.category) {
+    filteredTickets = filteredTickets.filter((ticket) => ticket.category === query.category);
+  }
+
+  if (query.search) {
+    const searchTerm = String(query.search).toLowerCase();
+
+    filteredTickets = filteredTickets.filter(
+      (ticket) =>
+        ticket.title.toLowerCase().includes(searchTerm) ||
+        ticket.description.toLowerCase().includes(searchTerm) ||
+        ticket.category.toLowerCase().includes(searchTerm),
+    );
+  }
+
+  return filteredTickets;
+}
+
+// Refatoração: extrai o enriquecimento usado na listagem de chamados.
+// A rota deixa de conhecer os detalhes de montagem do objeto de resposta.
+function enrichTicketSummary(ticket: Ticket, database: Database) {
+  const requester = database.users.find((user) => user.id === ticket.requesterId);
+  const assigned = database.users.find((user) => user.id === ticket.assignedToId);
+  const comments = database.comments.filter((comment) => comment.ticketId === ticket.id);
+
+  return {
+    ...ticket,
+    requester,
+    assigned,
+    commentsCount: comments.length,
+  };
+}
+
+// Refatoração: extrai o enriquecimento usado no detalhe de um chamado.
+// Essa função centraliza a inclusão de requester, assigned e comentários com autor.
+function enrichTicketDetails(ticket: Ticket, database: Database) {
+  const requester = database.users.find((user) => user.id === ticket.requesterId);
+  const assigned = database.users.find((user) => user.id === ticket.assignedToId);
+  const comments = database.comments
+    .filter((comment) => comment.ticketId === ticket.id)
+    .map((comment) => ({
+      ...comment,
+      author: database.users.find((user) => user.id === comment.authorId),
+    }));
+
+  return { ...ticket, requester, assigned, comments };
+}
+
 router.get("/health", (_request, response) => {
   response.json({ status: "ok", service: "oxetech-helpdesk" });
 });
@@ -48,38 +145,11 @@ router.get("/users", (_request, response) => {
 
 router.get("/tickets", (request, response) => {
   const database = readDatabase();
-  let tickets = database.tickets;
 
-  if (request.query.status) {
-    tickets = tickets.filter((ticket) => ticket.status === request.query.status);
-  }
-
-  if (request.query.category) {
-    tickets = tickets.filter((ticket) => ticket.category === request.query.category);
-  }
-
-  if (request.query.search) {
-    const search = String(request.query.search).toLowerCase();
-    tickets = tickets.filter(
-      (ticket) =>
-        ticket.title.toLowerCase().includes(search) ||
-        ticket.description.toLowerCase().includes(search) ||
-        ticket.category.toLowerCase().includes(search),
-    );
-  }
-
-  const result = tickets.map((ticket) => {
-    const requester = database.users.find((user) => user.id === ticket.requesterId);
-    const assigned = database.users.find((user) => user.id === ticket.assignedToId);
-    const comments = database.comments.filter((comment) => comment.ticketId === ticket.id);
-
-    return {
-      ...ticket,
-      requester,
-      assigned,
-      commentsCount: comments.length,
-    };
-  });
+  // Refatoração: o handler passa a delegar a filtragem e o enriquecimento.
+  // Isso reduz a quantidade de lógica dentro da rota.
+  const tickets = filterTickets(database.tickets, request.query);
+  const result = tickets.map((ticket) => enrichTicketSummary(ticket, database));
 
   response.json(result);
 });
@@ -107,33 +177,28 @@ router.get("/tickets/summary", (_request, response) => {
 
 router.get("/tickets/:id", (request, response) => {
   const database = readDatabase();
-  const ticket = database.tickets.find((item) => item.id === request.params.id);
+
+  // Refatoração: usa função auxiliar para buscar o chamado por ID.
+  const ticket = findTicketById(database, request.params.id);
 
   if (!ticket) {
     response.status(404).json({ error: "Ticket nao encontrado", id: request.params.id });
     return;
   }
 
-  const requester = database.users.find((user) => user.id === ticket.requesterId);
-  const assigned = database.users.find((user) => user.id === ticket.assignedToId);
-  const comments = database.comments
-    .filter((comment) => comment.ticketId === ticket.id)
-    .map((comment) => ({
-      ...comment,
-      author: database.users.find((user) => user.id === comment.authorId),
-    }));
-
-  response.json({ ...ticket, requester, assigned, comments });
+  // Refatoração: usa função dedicada para montar a resposta detalhada.
+  response.json(enrichTicketDetails(ticket, database));
 });
 
 router.post("/tickets", (request, response) => {
   const database = readDatabase();
   const body = request.body;
 
-  if (!body.title || !body.description || !body.category || !body.requesterId) {
+  // Refatoração: validação dos campos obrigatórios foi extraída para função auxiliar.
+  if (!hasRequiredTicketFields(body)) {
     response.status(400).json({
       message: "Campos obrigatorios ausentes",
-      required: ["title", "description", "category", "requesterId"],
+      required: REQUIRED_TICKET_FIELDS,
       received: body,
     });
     return;
@@ -145,7 +210,10 @@ router.post("/tickets", (request, response) => {
     return;
   }
 
-  const now = new Date().toISOString();
+  // Refatoração: a data atual é obtida por função auxiliar.
+  // Isso evita repetição e melhora a leitura.
+  const now = getCurrentIsoDate();
+
   const ticket: Ticket = {
     id: generateId("ticket"),
     title: body.title,
@@ -167,16 +235,20 @@ router.post("/tickets", (request, response) => {
 
 router.patch("/tickets/:id/status", (request, response) => {
   const database = readDatabase();
-  const ticket = database.tickets.find((item) => item.id === request.params.id);
-  const newStatus = request.body.status as TicketStatus;
+
+  // Refatoração: usa função auxiliar para localizar o chamado.
+  const ticket = findTicketById(database, request.params.id);
+  const newStatus = request.body.status;
 
   if (!ticket) {
     response.status(404).json({ message: "Ticket nao encontrado" });
     return;
   }
 
-  if (!["open", "in_progress", "resolved", "closed"].includes(newStatus)) {
-    response.status(400).json({ message: "Status invalido", allowed: ["open", "in_progress", "resolved", "closed"] });
+  // Refatoração: a validação de status foi extraída para um type guard.
+  // A lista de status permitidos também foi centralizada em constante.
+  if (!isValidTicketStatus(newStatus)) {
+    response.status(400).json({ message: "Status invalido", allowed: ALLOWED_TICKET_STATUSES });
     return;
   }
 
@@ -186,7 +258,7 @@ router.patch("/tickets/:id/status", (request, response) => {
   }
 
   ticket.status = newStatus;
-  ticket.updatedAt = new Date().toISOString();
+  ticket.updatedAt = getCurrentIsoDate();
 
   if (request.body.comment) {
     database.comments.push({
@@ -194,7 +266,7 @@ router.patch("/tickets/:id/status", (request, response) => {
       ticketId: ticket.id,
       authorId: request.body.authorId || ticket.requesterId,
       message: request.body.comment,
-      createdAt: new Date().toISOString(),
+      createdAt: getCurrentIsoDate(),
     });
   }
 
@@ -204,7 +276,9 @@ router.patch("/tickets/:id/status", (request, response) => {
 
 router.post("/tickets/:id/comments", (request, response) => {
   const database = readDatabase();
-  const ticket = database.tickets.find((item) => item.id === request.params.id);
+
+  // Refatoração: reutiliza a busca de chamado por ID.
+  const ticket = findTicketById(database, request.params.id);
   const body = request.body;
 
   if (!ticket) {
@@ -222,11 +296,11 @@ router.post("/tickets/:id/comments", (request, response) => {
     ticketId: ticket.id,
     authorId: body.authorId,
     message: body.message,
-    createdAt: new Date().toISOString(),
+    createdAt: getCurrentIsoDate(),
   };
 
   database.comments.push(comment);
-  ticket.updatedAt = new Date().toISOString();
+  ticket.updatedAt = getCurrentIsoDate();
   writeDatabase(database);
 
   response.status(201).json(comment);
