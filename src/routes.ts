@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { VALID_TICKET_STATUSES } from "./domain/ticket.constants";
 import type { Ticket, TicketStatus } from "./domain/types";
-import { calculatePriority, generateId } from "./domain/utils/ticket.utils";
+import { calculatePriority, calculateTicketSummary, generateId } from "./domain/utils/ticket.utils";
 import { readDatabase, writeDatabase } from "./infrastructure/database/file.repository";
 
 const router = Router();
@@ -56,21 +56,7 @@ router.get("/tickets", (request, response) => {
 
 router.get("/tickets/summary", (_request, response) => {
   const database = readDatabase();
-  const summary = {
-    open: 0,
-    in_progress: 0,
-    resolved: 0,
-    closed: 0,
-    urgent: 0,
-  };
-
-  for (const ticket of database.tickets) {
-    if (ticket.status === "open") summary.open++;
-    if (ticket.status === "in_progress") summary.in_progress++;
-    if (ticket.status === "resolved") summary.resolved++;
-    if (ticket.status === "closed") summary.closed++;
-    if (ticket.priority === "urgent") summary.urgent++;
-  }
+  const summary = calculateTicketSummary(database.tickets);
 
   response.json(summary);
 });
