@@ -3,5 +3,7 @@ dist/
 .env
 .DS_Store
 npm-debug.log*
+/docs/MANUAL_PROTOCOLOS.md
+/docs/AV1.MD
 
 TEACHER_GUIDE.md
