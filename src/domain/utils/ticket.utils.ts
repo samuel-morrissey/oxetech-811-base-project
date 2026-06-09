@@ -39,3 +39,30 @@ export function calculateTicketSummary(tickets: Ticket[]) {
 
   return summary;
 }
+
+export function filterTickets(
+  tickets: Ticket[],
+  filters: { status?: string; category?: string; search?: string },
+) {
+  let filteredTickets = tickets;
+
+  if (filters.status) {
+    filteredTickets = filteredTickets.filter((ticket) => ticket.status === filters.status);
+  }
+
+  if (filters.category) {
+    filteredTickets = filteredTickets.filter((ticket) => ticket.category === filters.category);
+  }
+
+  if (filters.search) {
+    const search = String(filters.search).toLowerCase();
+    filteredTickets = filteredTickets.filter(
+      (ticket) =>
+        ticket.title.toLowerCase().includes(search) ||
+        ticket.description.toLowerCase().includes(search) ||
+        ticket.category.toLowerCase().includes(search),
+    );
+  }
+
+  return filteredTickets;
+}

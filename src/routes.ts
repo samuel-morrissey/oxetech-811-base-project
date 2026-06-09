@@ -1,7 +1,12 @@
 import { Router } from "express";
 import { VALID_TICKET_STATUSES } from "./domain/ticket.constants";
 import type { Ticket, TicketStatus } from "./domain/types";
-import { calculatePriority, calculateTicketSummary, generateId } from "./domain/utils/ticket.utils";
+import {
+  calculatePriority,
+  calculateTicketSummary,
+  filterTickets,
+  generateId,
+} from "./domain/utils/ticket.utils";
 import {
   getComments,
   getTickets,
@@ -27,25 +32,13 @@ router.get("/tickets", (request, response) => {
   const users = getUsers();
   const comments = getComments();
 
-  let filteredTickets = tickets;
+  const { status, category, search } = request.query;
 
-  if (request.query.status) {
-    filteredTickets = filteredTickets.filter((ticket) => ticket.status === request.query.status);
-  }
-
-  if (request.query.category) {
-    filteredTickets = filteredTickets.filter((ticket) => ticket.category === request.query.category);
-  }
-
-  if (request.query.search) {
-    const search = String(request.query.search).toLowerCase();
-    filteredTickets = filteredTickets.filter(
-      (ticket) =>
-        ticket.title.toLowerCase().includes(search) ||
-        ticket.description.toLowerCase().includes(search) ||
-        ticket.category.toLowerCase().includes(search),
-    );
-  }
+  const filteredTickets = filterTickets(tickets, {
+    status: status as string,
+    category: category as string,
+    search: search as string,
+  });
 
   const result = filteredTickets.map((ticket) => {
     const requester = users.find((user) => user.id === ticket.requesterId);
