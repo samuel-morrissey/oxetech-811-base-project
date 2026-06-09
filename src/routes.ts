@@ -1,7 +1,7 @@
 import { Router } from "express";
 import fs from "node:fs";
 import path from "node:path";
-import type { Database, Ticket, TicketPriority, TicketStatus } from "./types";
+import type { Database, Ticket, TicketPriority, TicketStatus } from "./domain/types";
 
 const router = Router();
 const dataFile = process.env.DATA_FILE || "data/db.json";
