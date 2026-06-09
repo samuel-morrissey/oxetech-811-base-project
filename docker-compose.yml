@@ -1,0 +1,17 @@
+version: '3.8'
+
+services:
+  app-oxetech:
+    image: node:20-alpine
+    container_name: oxetech_811_app
+    working_dir: /usr/src/app
+    volumes:
+      - .:/usr/src/app
+      # Protege os módulos locais para o container instalar os dele de forma isolada
+      - /usr/src/app/node_modules 
+    ports:
+      - "3010:3000"
+    # A mágica acontece aqui: ele instala as dependências e roda o script exato do seu package.json
+    command: sh -c "npm install && npm run dev"
+    environment:
+      - NODE_ENV=development
