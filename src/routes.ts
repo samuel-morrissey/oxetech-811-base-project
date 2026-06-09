@@ -2,7 +2,14 @@ import { Router } from "express";
 import { VALID_TICKET_STATUSES } from "./domain/ticket.constants";
 import type { Ticket, TicketStatus } from "./domain/types";
 import { calculatePriority, calculateTicketSummary, generateId } from "./domain/utils/ticket.utils";
-import { readDatabase, writeDatabase } from "./infrastructure/database/file.repository";
+import {
+  getComments,
+  getTickets,
+  getUsers,
+  saveComment,
+  saveTicket,
+  updateTicket,
+} from "./infrastructure/database/file.repository";
 
 const router = Router();
 
@@ -11,26 +18,28 @@ router.get("/health", (_request, response) => {
 });
 
 router.get("/users", (_request, response) => {
-  const database = readDatabase();
-
-  response.json(database.users);
+  const users = getUsers();
+  response.json(users);
 });
 
 router.get("/tickets", (request, response) => {
-  const database = readDatabase();
-  let tickets = database.tickets;
+  const tickets = getTickets();
+  const users = getUsers();
+  const comments = getComments();
+
+  let filteredTickets = tickets;
 
   if (request.query.status) {
-    tickets = tickets.filter((ticket) => ticket.status === request.query.status);
+    filteredTickets = filteredTickets.filter((ticket) => ticket.status === request.query.status);
   }
 
   if (request.query.category) {
-    tickets = tickets.filter((ticket) => ticket.category === request.query.category);
+    filteredTickets = filteredTickets.filter((ticket) => ticket.category === request.query.category);
   }
 
   if (request.query.search) {
     const search = String(request.query.search).toLowerCase();
-    tickets = tickets.filter(
+    filteredTickets = filteredTickets.filter(
       (ticket) =>
         ticket.title.toLowerCase().includes(search) ||
         ticket.description.toLowerCase().includes(search) ||
@@ -38,16 +47,16 @@ router.get("/tickets", (request, response) => {
     );
   }
 
-  const result = tickets.map((ticket) => {
-    const requester = database.users.find((user) => user.id === ticket.requesterId);
-    const assigned = database.users.find((user) => user.id === ticket.assignedToId);
-    const comments = database.comments.filter((comment) => comment.ticketId === ticket.id);
+  const result = filteredTickets.map((ticket) => {
+    const requester = users.find((user) => user.id === ticket.requesterId);
+    const assigned = users.find((user) => user.id === ticket.assignedToId);
+    const ticketComments = comments.filter((comment) => comment.ticketId === ticket.id);
 
     return {
       ...ticket,
       requester,
       assigned,
-      commentsCount: comments.length,
+      commentsCount: ticketComments.length,
     };
   });
 
@@ -55,35 +64,36 @@ router.get("/tickets", (request, response) => {
 });
 
 router.get("/tickets/summary", (_request, response) => {
-  const database = readDatabase();
-  const summary = calculateTicketSummary(database.tickets);
-
+  const tickets = getTickets();
+  const summary = calculateTicketSummary(tickets);
   response.json(summary);
 });
 
 router.get("/tickets/:id", (request, response) => {
-  const database = readDatabase();
-  const ticket = database.tickets.find((item) => item.id === request.params.id);
+  const tickets = getTickets();
+  const ticket = tickets.find((item) => item.id === request.params.id);
 
   if (!ticket) {
     response.status(404).json({ error: "Ticket nao encontrado", id: request.params.id });
     return;
   }
 
-  const requester = database.users.find((user) => user.id === ticket.requesterId);
-  const assigned = database.users.find((user) => user.id === ticket.assignedToId);
-  const comments = database.comments
+  const users = getUsers();
+  const comments = getComments();
+
+  const requester = users.find((user) => user.id === ticket.requesterId);
+  const assigned = users.find((user) => user.id === ticket.assignedToId);
+  const ticketComments = comments
     .filter((comment) => comment.ticketId === ticket.id)
     .map((comment) => ({
       ...comment,
-      author: database.users.find((user) => user.id === comment.authorId),
+      author: users.find((user) => user.id === comment.authorId),
     }));
 
-  response.json({ ...ticket, requester, assigned, comments });
+  response.json({ ...ticket, requester, assigned, comments: ticketComments });
 });
 
 router.post("/tickets", (request, response) => {
-  const database = readDatabase();
   const body = request.body;
 
   if (!body.title || !body.description || !body.category || !body.requesterId) {
@@ -95,7 +105,8 @@ router.post("/tickets", (request, response) => {
     return;
   }
 
-  const user = database.users.find((item) => item.id === body.requesterId);
+  const users = getUsers();
+  const user = users.find((item) => item.id === body.requesterId);
   if (!user) {
     response.status(400).json({ message: "Solicitante invalido" });
     return;
@@ -115,15 +126,14 @@ router.post("/tickets", (request, response) => {
     updatedAt: now,
   };
 
-  database.tickets.push(ticket);
-  writeDatabase(database);
+  saveTicket(ticket);
 
   response.status(201).json(ticket);
 });
 
 router.patch("/tickets/:id/status", (request, response) => {
-  const database = readDatabase();
-  const ticket = database.tickets.find((item) => item.id === request.params.id);
+  const tickets = getTickets();
+  const ticket = tickets.find((item) => item.id === request.params.id);
   const newStatus = request.body.status as TicketStatus;
 
   if (!ticket) {
@@ -132,9 +142,9 @@ router.patch("/tickets/:id/status", (request, response) => {
   }
 
   if (!VALID_TICKET_STATUSES.includes(newStatus)) {
-    response.status(400).json({ 
-      message: "Status invalido", 
-      allowed: VALID_TICKET_STATUSES 
+    response.status(400).json({
+      message: "Status invalido",
+      allowed: VALID_TICKET_STATUSES,
     });
     return;
   }
@@ -147,23 +157,25 @@ router.patch("/tickets/:id/status", (request, response) => {
   ticket.status = newStatus;
   ticket.updatedAt = new Date().toISOString();
 
+  updateTicket(ticket);
+
   if (request.body.comment) {
-    database.comments.push({
+    const comment = {
       id: generateId("comment"),
       ticketId: ticket.id,
       authorId: request.body.authorId || ticket.requesterId,
       message: request.body.comment,
       createdAt: new Date().toISOString(),
-    });
+    };
+    saveComment(comment);
   }
 
-  writeDatabase(database);
   response.json(ticket);
 });
 
 router.post("/tickets/:id/comments", (request, response) => {
-  const database = readDatabase();
-  const ticket = database.tickets.find((item) => item.id === request.params.id);
+  const tickets = getTickets();
+  const ticket = tickets.find((item) => item.id === request.params.id);
   const body = request.body;
 
   if (!ticket) {
@@ -184,9 +196,10 @@ router.post("/tickets/:id/comments", (request, response) => {
     createdAt: new Date().toISOString(),
   };
 
-  database.comments.push(comment);
+  saveComment(comment);
+
   ticket.updatedAt = new Date().toISOString();
-  writeDatabase(database);
+  updateTicket(ticket);
 
   response.status(201).json(comment);
 });
