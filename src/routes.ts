@@ -1,7 +1,8 @@
 import { Router } from "express";
 import fs from "node:fs";
 import path from "node:path";
-import type { Database, Ticket, TicketPriority, TicketStatus } from "./domain/types";
+import type { Database, Ticket, TicketStatus } from "./domain/types";
+import { calculatePriority, generateId } from "./domain/utils/ticket.utils";
 
 const router = Router();
 const dataFile = process.env.DATA_FILE || "data/db.json";
@@ -14,26 +15,6 @@ function readDatabase(): Database {
 
 function writeDatabase(database: Database) {
   fs.writeFileSync(databasePath, JSON.stringify(database, null, 2));
-}
-
-function generateId(prefix: string) {
-  return `${prefix}_${Date.now()}_${Math.floor(Math.random() * 10000)}`;
-}
-
-function calculatePriority(category: string, description: string): TicketPriority {
-  if (category === "infra" || description.toLowerCase().includes("urgente")) {
-    return "urgent";
-  }
-
-  if (category === "sistemas" || description.length > 220) {
-    return "high";
-  }
-
-  if (category === "academico") {
-    return "medium";
-  }
-
-  return "low";
 }
 
 router.get("/health", (_request, response) => {
