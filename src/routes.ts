@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { VALID_TICKET_STATUSES } from "./domain/ticket.constants";
 import type { Ticket, TicketStatus } from "./domain/types";
 import { calculatePriority, generateId } from "./domain/utils/ticket.utils";
 import { readDatabase, writeDatabase } from "./infrastructure/database/file.repository";
@@ -144,8 +145,11 @@ router.patch("/tickets/:id/status", (request, response) => {
     return;
   }
 
-  if (!["open", "in_progress", "resolved", "closed"].includes(newStatus)) {
-    response.status(400).json({ message: "Status invalido", allowed: ["open", "in_progress", "resolved", "closed"] });
+  if (!VALID_TICKET_STATUSES.includes(newStatus)) {
+    response.status(400).json({ 
+      message: "Status invalido", 
+      allowed: VALID_TICKET_STATUSES 
+    });
     return;
   }
 
