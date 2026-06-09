@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { VALID_TICKET_STATUSES } from "./domain/ticket.constants";
 import type { Ticket, TicketStatus } from "./domain/types";
+import { mapTicketDetails } from "./domain/utils/ticket.mapper";
 import {
   calculatePriority,
   calculateTicketSummary,
@@ -40,18 +41,7 @@ router.get("/tickets", (request, response) => {
     search: search as string,
   });
 
-  const result = filteredTickets.map((ticket) => {
-    const requester = users.find((user) => user.id === ticket.requesterId);
-    const assigned = users.find((user) => user.id === ticket.assignedToId);
-    const ticketComments = comments.filter((comment) => comment.ticketId === ticket.id);
-
-    return {
-      ...ticket,
-      requester,
-      assigned,
-      commentsCount: ticketComments.length,
-    };
-  });
+  const result = filteredTickets.map((ticket) => mapTicketDetails(ticket, users, comments));
 
   response.json(result);
 });
@@ -74,16 +64,9 @@ router.get("/tickets/:id", (request, response) => {
   const users = getUsers();
   const comments = getComments();
 
-  const requester = users.find((user) => user.id === ticket.requesterId);
-  const assigned = users.find((user) => user.id === ticket.assignedToId);
-  const ticketComments = comments
-    .filter((comment) => comment.ticketId === ticket.id)
-    .map((comment) => ({
-      ...comment,
-      author: users.find((user) => user.id === comment.authorId),
-    }));
+  const enrichedTicket = mapTicketDetails(ticket, users, comments, true);
 
-  response.json({ ...ticket, requester, assigned, comments: ticketComments });
+  response.json(enrichedTicket);
 });
 
 router.post("/tickets", (request, response) => {
