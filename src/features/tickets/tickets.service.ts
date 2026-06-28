@@ -17,11 +17,6 @@ import {
   enrichTicketWithComments,
 } from "./utils/enrich-ticket.js";
 import { filterTickets } from "./utils/filter-tickets.js";
-import {
-  TICKET_STATUSES,
-  isValidTicketStatus,
-  type TicketStatus,
-} from "./utils/is-valid-ticket-status.js";
 import { buildTicketSummary } from "./utils/ticket-summary.js";
 
 export class TicketsService implements Service {
@@ -64,23 +59,6 @@ export class TicketsService implements Service {
   }
 
   create(input: CreateTicketDto): Ticket {
-    if (
-      !input.title ||
-      !input.description ||
-      !input.category ||
-      !input.requesterId
-    ) {
-      throw new BadRequest("Campos obrigatorios ausentes", {
-        required: ["title", "description", "category", "requesterId"],
-        received: {
-          title: input.title,
-          description: input.description,
-          category: input.category,
-          requesterId: input.requesterId,
-        },
-      });
-    }
-
     const user = this.usersRepository.findById(input.requesterId);
     if (!user) {
       throw new BadRequest("Solicitante invalido");
@@ -107,24 +85,18 @@ export class TicketsService implements Service {
     const ticket = this.ticketsRepository.findById(input.ticketId);
 
     if (!ticket) {
-      throw new NotFound("Ticket nao encontrado");
-    }
-
-    if (!isValidTicketStatus(input.status)) {
-      throw new BadRequest("Status invalido", {
-        allowed: [...TICKET_STATUSES],
+      throw new NotFound("Ticket nao encontrado", {
+        id: input.ticketId,
       });
     }
 
-    const newStatus: TicketStatus = input.status;
-
-    if (newStatus === "closed" && !input.comment) {
+    if (input.status === "closed" && !input.comment) {
       throw new BadRequest(
         "Informe um comentario para fechar o chamado",
       );
     }
 
-    ticket.status = newStatus;
+    ticket.status = input.status;
     ticket.updatedAt = new Date().toISOString();
 
     if (input.comment) {
@@ -149,11 +121,9 @@ export class TicketsService implements Service {
     const ticket = this.ticketsRepository.findById(input.ticketId);
 
     if (!ticket) {
-      throw new NotFound("Ticket nao encontrado");
-    }
-
-    if (!input.message || !input.authorId) {
-      throw new BadRequest("Comentario e autor sao obrigatorios");
+      throw new NotFound("Ticket nao encontrado", {
+        id: input.ticketId,
+      });
     }
 
     ticket.updatedAt = new Date().toISOString();

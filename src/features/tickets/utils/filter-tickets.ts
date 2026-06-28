@@ -1,21 +1,15 @@
 import type { Request } from "express";
+import { parseOrThrow } from "../../../http/validate.js";
 import type { Ticket } from "../types/ticket.js";
-import type { ListTicketsDto } from "../dtos/list-tickets.dto.js";
-
-function toQueryString(
-  value: Request["query"][string],
-): string | undefined {
-  return typeof value === "string" ? value : undefined;
-}
+import {
+  listTicketsQuerySchema,
+  type ListTicketsDto,
+} from "../dtos/list-tickets.dto.js";
 
 export function parseTicketFilters(
   query: Request["query"],
 ): ListTicketsDto {
-  return {
-    status: toQueryString(query.status),
-    category: toQueryString(query.category),
-    search: toQueryString(query.search),
-  };
+  return parseOrThrow(listTicketsQuerySchema, query);
 }
 
 export function filterTickets(
