@@ -2,16 +2,33 @@ import fs from "node:fs";
 import path from "node:path";
 import { Database } from "./types";
 
-const dataFile = process.env.DATA_FILE || "data/db.json";
-const databasePath = path.resolve(process.cwd(), dataFile);
+export class DatabaseManager {
+    private static instance: DatabaseManager;
 
-function readDatabase(): Database {
-    const content = fs.readFileSync(databasePath, "utf-8");
-    return JSON.parse(content) as Database;
+    private readonly databasePath: string;
+
+    private constructor() {
+        const dataFile = process.env.DATA_FILE || "data/db.json";
+        this.databasePath = path.resolve(process.cwd(), dataFile);
+    }
+
+    public static getInstance(): DatabaseManager {
+        if (!DatabaseManager.instance) {
+            DatabaseManager.instance = new DatabaseManager();
+        }
+
+        return DatabaseManager.instance;
+    }
+
+    public readDatabase(): Database {
+        const content = fs.readFileSync(this.databasePath, "utf-8");
+        return JSON.parse(content) as Database;
+    }
+
+    public writeDatabase(database: Database): void {
+        fs.writeFileSync(
+            this.databasePath,
+            JSON.stringify(database, null, 2)
+        );
+    }
 }
-
-function writeDatabase(database: Database) {
-    fs.writeFileSync(databasePath, JSON.stringify(database, null, 2));
-}
-
-export { readDatabase, writeDatabase };
