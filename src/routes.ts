@@ -1,101 +1,16 @@
 import { Router } from "express";
-import fs from "node:fs";
-import path from "node:path";
-import type { Database, Ticket, TicketPriority, TicketStatus } from "./types";
+import type { Ticket, TicketStatus } from "./types";
+import { readDatabase, writeDatabase } from "./repositories/databaseRepository";
+import {
+	calculatePriority,
+	VALID_STATUSES,
+	findTicketById,
+	createComment,
+} from "./services/ticketService";
+import { generateId } from "./utils/generateId";
 
 const router = Router();
-const dataFilePath = process.env.DATA_FILE || "data/db.json";
-const databasePath = path.resolve(process.cwd(), dataFilePath);
 
-const HIGH_PRIORITY_MIN_LENGTH = 220;
-
-function readDatabase(): Database {
-	const content = fs.readFileSync(databasePath, "utf-8");
-	return JSON.parse(content) as Database;
-}
-
-function writeDatabase(database: Database) {
-	fs.writeFileSync(databasePath, JSON.stringify(database, null, 2));
-}
-
-function generateId(prefix: string) {
-	return `${prefix}_${Date.now()}_${Math.floor(Math.random() * 10000)}`;
-}
-
-interface PriorityRule {
-	matches(fields: PriorityFields): boolean;
-	readonly priority: TicketPriority;
-}
-
-interface PriorityFields {
-	category: string;
-	description: string;
-}
-
-class UrgentPriorityRule implements PriorityRule {
-	readonly priority: TicketPriority = "urgent";
-
-	matches(fields: PriorityFields): boolean {
-		return (
-			fields.category === "infra" ||
-			fields.description.toLowerCase().includes("urgente")
-		);
-	}
-}
-
-class HighPriorityRule implements PriorityRule {
-	readonly priority: TicketPriority = "high";
-
-	matches(fields: PriorityFields): boolean {
-		return fields.category === "sistemas" || fields.description.length > HIGH_PRIORITY_MIN_LENGTH;
-	}
-}
-
-class MediumPriorityRule implements PriorityRule {
-	readonly priority: TicketPriority = "medium";
-
-	matches(fields: PriorityFields): boolean {
-		return fields.category === "academico";
-	}
-}
-
-const priorityRules: PriorityRule[] = [
-	new UrgentPriorityRule(),
-	new HighPriorityRule(),
-	new MediumPriorityRule(),
-];
-
-const VALID_STATUSES = ["open", "in_progress", "resolved", "closed"] as const;
-
-function calculatePriority(
-	category: string,
-	description: string,
-): TicketPriority {
-	const matchedRule = priorityRules.find((rule) =>
-		rule.matches({ category, description }),
-	);
-	return matchedRule?.priority ?? "low";
-}
-
-function findTicketById(database: Database, id: string): Ticket | undefined {
-	return database.tickets.find((ticket) => ticket.id === id);
-}
-
-interface CreateCommentInput {
-	ticketId: string;
-	authorId: string;
-	message: string;
-}
-
-function createComment(input: CreateCommentInput) {
-	return {
-		id: generateId("comment"),
-		ticketId: input.ticketId,
-		authorId: input.authorId,
-		message: input.message,
-		createdAt: new Date().toISOString(),
-	};
-}
 
 router.get("/health", (_request, response) => {
 	response.json({ status: "ok", service: "oxetech-helpdesk" });
