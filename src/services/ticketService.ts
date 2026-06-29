@@ -3,17 +3,17 @@ import { generateId } from "../utils/generateId";
 
 const HIGH_PRIORITY_MIN_LENGTH = 220;
 
-export interface PriorityRule {
+interface PriorityRule {
     matches(fields: PriorityFields): boolean;
     readonly priority: TicketPriority;
 }
 
-export interface PriorityFields {
+interface PriorityFields {
     category: string;
     description: string;
 }
 
-export class UrgentPriorityRule implements PriorityRule {
+class UrgentPriorityRule implements PriorityRule {
     readonly priority: TicketPriority = "urgent";
 
     matches(fields: PriorityFields): boolean {
@@ -24,7 +24,7 @@ export class UrgentPriorityRule implements PriorityRule {
     }
 }
 
-export class HighPriorityRule implements PriorityRule {
+class HighPriorityRule implements PriorityRule {
     readonly priority: TicketPriority = "high";
 
     matches(fields: PriorityFields): boolean {
@@ -32,7 +32,7 @@ export class HighPriorityRule implements PriorityRule {
     }
 }
 
-export class MediumPriorityRule implements PriorityRule {
+class MediumPriorityRule implements PriorityRule {
     readonly priority: TicketPriority = "medium";
 
     matches(fields: PriorityFields): boolean {
@@ -40,7 +40,7 @@ export class MediumPriorityRule implements PriorityRule {
     }
 }
 
-export const priorityRules: PriorityRule[] = [
+const priorityRules: PriorityRule[] = [
     new UrgentPriorityRule(),
     new HighPriorityRule(),
     new MediumPriorityRule(),
@@ -62,7 +62,7 @@ export function findTicketById(database: Database, id: string): Ticket | undefin
     return database.tickets.find((ticket: Ticket) => ticket.id === id);
 }
 
-export interface CreateCommentInput {
+interface CreateCommentInput {
 	ticketId: string;
 	authorId: string;
 	message: string;

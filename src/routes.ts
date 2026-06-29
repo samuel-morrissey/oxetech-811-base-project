@@ -8,6 +8,8 @@ import {
 	createComment,
 } from "./services/ticketService";
 import { generateId } from "./utils/generateId";
+import { toTicketDetailsDto, toTicketListItemDto } from "./dtos/ticketDto";
+import { toPublicUserDto } from "./dtos/userDto";
 
 const router = Router();
 
@@ -19,7 +21,7 @@ router.get("/health", (_request, response) => {
 router.get("/users", (_request, response) => {
 	const database = readDatabase();
 
-	response.json(database.users);
+	response.json(database.users.map(toPublicUserDto));
 });
 
 router.get("/tickets", (request, response) => {
@@ -48,24 +50,7 @@ router.get("/tickets", (request, response) => {
 		);
 	}
 
-	const result = tickets.map((ticket) => {
-		const requester = database.users.find(
-			(user) => user.id === ticket.requesterId,
-		);
-		const assigned = database.users.find(
-			(user) => user.id === ticket.assignedToId,
-		);
-		const comments = database.comments.filter(
-			(comment) => comment.ticketId === ticket.id,
-		);
-
-		return {
-			...ticket,
-			requester,
-			assigned,
-			commentsCount: comments.length,
-		};
-	});
+	const result = tickets.map((ticket) => toTicketListItemDto(ticket, database));
 
 	response.json(result);
 });
@@ -102,20 +87,7 @@ router.get("/tickets/:id", (request, response) => {
 		return;
 	}
 
-	const requester = database.users.find(
-		(user) => user.id === ticket.requesterId,
-	);
-	const assigned = database.users.find(
-		(user) => user.id === ticket.assignedToId,
-	);
-	const comments = database.comments
-		.filter((comment) => comment.ticketId === ticket.id)
-		.map((comment) => ({
-			...comment,
-			author: database.users.find((user) => user.id === comment.authorId),
-		}));
-
-	response.json({ ...ticket, requester, assigned, comments });
+	response.json(toTicketDetailsDto(ticket, database));
 });
 
 router.post("/tickets", (request, response) => {
