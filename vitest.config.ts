@@ -9,6 +9,7 @@ export default defineConfig({
       include: ["src/**/*.ts"],
       exclude: [
         "src/server.ts",
+        "src/app.ts",
         "src/seed.ts",
         "src/**/*.routes.ts",
         "src/**/*.controller.ts",
