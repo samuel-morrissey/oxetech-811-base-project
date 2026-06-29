@@ -58,6 +58,17 @@
       "assignedToId": "user_bruno",
       "createdAt": "2026-05-03T14:20:00.000Z",
       "updatedAt": "2026-05-04T09:00:00.000Z"
+    },
+    {
+      "id": "ticket_1780293615076_264",
+      "title": "Problema no servidor",
+      "description": "urgente resolver",
+      "category": "infra",
+      "requesterId": "user_ana",
+      "status": "open",
+      "priority": "urgent",
+      "createdAt": "2026-06-01T06:00:15.076Z",
+      "updatedAt": "2026-06-01T06:00:15.076Z"
     }
   ],
   "comments": [

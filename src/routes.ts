@@ -7,6 +7,8 @@ const router = Router();
 const dataFilePath = process.env.DATA_FILE || "data/db.json";
 const databasePath = path.resolve(process.cwd(), dataFilePath);
 
+const HIGH_PRIORITY_MIN_LENGTH = 220;
+
 function readDatabase(): Database {
 	const content = fs.readFileSync(databasePath, "utf-8");
 	return JSON.parse(content) as Database;
@@ -45,7 +47,7 @@ class HighPriorityRule implements PriorityRule {
 	readonly priority: TicketPriority = "high";
 
 	matches(fields: PriorityFields): boolean {
-		return fields.category === "sistemas" || fields.description.length > 220;
+		return fields.category === "sistemas" || fields.description.length > HIGH_PRIORITY_MIN_LENGTH;
 	}
 }
 
