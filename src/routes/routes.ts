@@ -1,15 +1,15 @@
 import { Router } from "express";
-import type { Ticket, TicketStatus } from "./types";
-import { readDatabase, writeDatabase } from "./repositories/databaseRepository";
+import type { Ticket, TicketStatus } from "../types";
+import { readDatabase, writeDatabase } from "../repositories/databaseRepository";
 import {
 	calculatePriority,
 	VALID_STATUSES,
 	findTicketById,
 	createComment,
-} from "./services/ticketService";
-import { generateId } from "./utils/generateId";
-import { toTicketDetailsDto, toTicketListItemDto } from "./dtos/ticketDto";
-import { toPublicUserDto } from "./dtos/userDto";
+} from "../services/ticketService";
+import { generateId } from "../utils/generateId";
+import { toTicketDetailsDto, toTicketListItemDto } from "../dtos/ticketDto";
+import { toPublicUserDto } from "../dtos/userDto";
 
 const router = Router();
 
