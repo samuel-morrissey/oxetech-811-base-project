@@ -1,43 +1,90 @@
 # Oxetech Helpdesk API
 
-Esta e uma codebase-base para exercicios de refatoracao incremental. O projeto simula uma API simples de chamados de suporte academico.
+API REST em Node.js/TypeScript para chamados de suporte academico. Projeto de refatoracao incremental do curso 811.
 
-O objetivo nao e reconstruir o sistema do zero. O objetivo e entender a aplicacao existente, identificar problemas tecnicos, fazer melhorias pequenas e justificar as decisoes por Pull Request.
-
-## Requisitos
-
-- Node.js 20 ou superior
-- npm
-
-## Como rodar
-
-Instale as dependencias:
+## Quick start
 
 ```bash
 npm install
-```
-
-Reinicie os dados de exemplo, se necessario:
-
-```bash
 npm run seed
-```
-
-Execute em modo desenvolvimento:
-
-```bash
 npm run dev
 ```
 
-A API ficara disponivel em `http://localhost:3000/api`.
+API disponivel em `http://localhost:3000/api`.
+
+## Requisitos
+
+- Node.js 20+
+- npm
+- Docker (opcional, para execucao em container)
 
 ## Scripts
 
-- `npm run dev`: executa a API em modo desenvolvimento.
-- `npm run seed`: recria o arquivo de dados inicial.
-- `npm run typecheck`: valida os tipos TypeScript.
-- `npm run build`: compila o projeto para `dist`.
-- `npm test`: placeholder inicial. Testes devem ser criados durante a evolucao.
+| Script                  | Descricao                                    |
+| ----------------------- | -------------------------------------------- |
+| `npm run dev`           | API em modo desenvolvimento                  |
+| `npm run seed`          | Recria `data/db.json`                        |
+| `npm start`             | Executa build de producao (`dist/server.js`) |
+| `npm test`              | Suite de testes (Vitest)                     |
+| `npm run test:coverage` | Testes com cobertura                         |
+| `npm run lint`          | ESLint                                       |
+| `npm run typecheck`     | Verificacao de tipos                         |
+| `npm run build`         | Compila TypeScript para `dist/`              |
+
+## Testes
+
+```bash
+npm test
+npm run test:coverage
+```
+
+A suite inclui:
+
+- testes unitarios de utils e services (`tests/features/`)
+- testes de integracao HTTP com supertest (`tests/integration/`)
+
+## Executando com Docker
+
+Antes de subir o container, garanta dados locais (o compose monta `./data`):
+
+```bash
+npm run seed
+docker compose up --build
+```
+
+A API ficara em `http://localhost:3000/api`.
+
+Build manual:
+
+```bash
+docker build -t oxetech-helpdesk .
+docker run -p 3000:3000 -v "$(pwd)/data:/app/data" oxetech-helpdesk
+```
+
+## Integracao continua
+
+![CI](https://github.com/Talyslan/software-engineering-oxetech-academy/actions/workflows/ci.yml/badge.svg)
+
+Pipeline em [`.github/workflows/ci.yml`](.github/workflows/ci.yml): **lint**, **typecheck**, **testes** e **build** a cada push/PR.
+
+## Estrutura do projeto
+
+```
+src/
+├── app.ts                 # createApp() — Express configurado
+├── server.ts              # Entry point (listen)
+├── composition/           # Factory de modulos (tickets, users)
+├── features/              # health, tickets, users
+│   └── */                 # controller, service, repository, dtos
+├── http/                  # ApiError, middleware, validacao
+├── routes/                # Agregador de rotas
+└── utils/                 # persistencia JSON, helpers
+tests/
+├── features/              # unitarios
+└── integration/           # HTTP (supertest)
+data/
+└── avaliacao-2/           # documentacao e tasks da Avaliacao 2
+```
 
 ## Endpoints principais
 
@@ -47,11 +94,25 @@ A API ficara disponivel em `http://localhost:3000/api`.
 GET /api/health
 ```
 
+Resposta inclui `timestamp`, `uptime` (segundos) e status do arquivo de banco (`database`: `reachable` | `missing`).
+
+```json
+{
+  "status": "ok",
+  "service": "oxetech-helpdesk",
+  "timestamp": "2026-06-28T12:00:00.000Z",
+  "uptime": 42,
+  "database": "reachable"
+}
+```
+
 ### Listar usuarios
 
 ```http
 GET /api/users
 ```
+
+Resposta **nao inclui** campo `password`.
 
 ### Listar chamados
 
@@ -115,14 +176,31 @@ Content-Type: application/json
 
 ## Jornada de refatoracao
 
-Trabalhe em Pull Requests pequenos e bem explicados.
+Trabalhe em Pull Requests pequenos e bem explicados. Consulte [docs/CHECKPOINTS.md](docs/CHECKPOINTS.md).
 
-Em cada PR, registre:
+### Avaliacao 1
 
-- quais problemas voce encontrou;
-- quais melhorias foram feitas;
-- quais conceitos do curso foram aplicados;
-- como voce verificou que o comportamento continua funcionando;
-- quais limitacoes continuam existindo.
+- [Diagnostico inicial](docs/DIAGNOSTICO-ATIVIDADE-1.md)
+- [Validacao manual A1](docs/VALIDACAO-MANUAL-A1.md)
 
-Consulte [docs/CHECKPOINTS.md](docs/CHECKPOINTS.md) para entender o escopo esperado de cada entrega.
+### Avaliacao 2
+
+- [Diagnostico A2](docs/DIAGNOSTICO-AVALIACAO-2.md)
+- [Evolucao A2](docs/EVOLUCAO-A2.md)
+- [Arquitetura A2](docs/ARQUITETURA-A2.md)
+- [Validacao manual A2](docs/VALIDACAO-MANUAL-A2.md)
+- [Texto do Pull Request](docs/PULL-REQUEST-AVALIACAO-2.md)
+- [Tasks e guias](data/avaliacao-2/tasks/README.md)
+
+## Como avaliar esta entrega
+
+```bash
+npm run lint
+npm run typecheck
+npm test
+npm run build
+npm run seed && npm run dev
+# ou: npm run seed && docker compose up --build
+curl http://localhost:3000/api/health
+curl http://localhost:3000/api/users
+```
