@@ -3,6 +3,7 @@ import {
   enrichTicketForList,
   enrichTicketWithComments,
 } from "../../../../src/features/tickets/utils/enrich-ticket.js";
+import { toPublicUser } from "../../../../src/features/users/dtos/public-user.dto.js";
 import type { Ticket } from "../../../../src/features/tickets/types/ticket.js";
 import type { TicketsRepository } from "../../../../src/features/tickets/tickets.repository.js";
 import type { Repository } from "../../../../src/domain/repository.js";
@@ -73,8 +74,8 @@ describe("enrichTicketForList", () => {
       enrichTicketForList(ticketsRepository, usersRepository, ticket),
     ).toEqual({
       ...ticket,
-      requester: users.user_1,
-      assigned: users.user_2,
+      requester: toPublicUser(users.user_1),
+      assigned: toPublicUser(users.user_2),
       commentsCount: 1,
     });
   });
@@ -110,8 +111,8 @@ describe("enrichTicketWithComments", () => {
       ),
     ).toEqual({
       ...ticket,
-      requester: users.user_1,
-      assigned: users.user_2,
+      requester: toPublicUser(users.user_1),
+      assigned: toPublicUser(users.user_2),
       comments: [
         {
           id: "comment_1",
@@ -119,7 +120,7 @@ describe("enrichTicketWithComments", () => {
           authorId: "user_2",
           message: "Em analise",
           createdAt: "2026-01-01T01:00:00.000Z",
-          author: users.user_2,
+          author: toPublicUser(users.user_2),
         },
       ],
     });
