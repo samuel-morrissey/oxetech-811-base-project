@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import type { Database } from "../types";
+import type { Database } from "../models/types";
 
 const dataFilePath = process.env.DATA_FILE || "data/db.json";
 const databasePath = path.resolve(process.cwd(), dataFilePath);

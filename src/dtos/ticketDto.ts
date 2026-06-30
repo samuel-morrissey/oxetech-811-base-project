@@ -1,4 +1,4 @@
-import type { Database, Ticket, TicketComment } from "../types";
+import type { Database, Ticket, TicketComment } from "../models/types";
 import { toPublicUserDto, type PublicUserDto } from "./userDto";
 
 type TicketWithRelationsDto = Ticket & {

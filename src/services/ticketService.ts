@@ -4,7 +4,7 @@ import type {
 	TicketComment,
 	TicketPriority,
 	TicketStatus,
-} from "../types";
+} from "../models/types";
 import { readDatabase, writeDatabase } from "../repositories/databaseRepository";
 import { generateId } from "../utils/generateId";
 
