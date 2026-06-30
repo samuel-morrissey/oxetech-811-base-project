@@ -7,6 +7,7 @@ import type {
 } from "../models/types";
 import { readDatabase, writeDatabase } from "../repositories/databaseRepository";
 import { generateId } from "../utils/generateId";
+import { createTicketEntity, type CreateTicketInput } from "./ticketFactory";
 
 const HIGH_PRIORITY_MIN_LENGTH = 220;
 
@@ -69,14 +70,6 @@ export function findTicketById(database: Database, id: string): Ticket | undefin
     return database.tickets.find((ticket: Ticket) => ticket.id === id);
 }
 
-interface CreateTicketInput {
-	title: string;
-	description: string;
-	category: string;
-	requesterId: string;
-	assignedToId?: string;
-}
-
 type CreateTicketResult =
 	| { success: true; ticket: Ticket }
 	| { success: false; message: string };
@@ -89,19 +82,10 @@ export function createTicket(input: CreateTicketInput): CreateTicketResult {
 		return { success: false, message: "Solicitante invalido" };
 	}
 
-	const now = new Date().toISOString();
-	const ticket: Ticket = {
-		id: generateId("ticket"),
-		title: input.title,
-		description: input.description,
-		category: input.category,
-		requesterId: input.requesterId,
-		assignedToId: input.assignedToId,
-		status: "open",
+	const ticket = createTicketEntity({
+		...input,
 		priority: calculatePriority(input.category, input.description),
-		createdAt: now,
-		updatedAt: now,
-	};
+	});
 
 	database.tickets.push(ticket);
 	writeDatabase(database);
