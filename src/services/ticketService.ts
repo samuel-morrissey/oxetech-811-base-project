@@ -5,7 +5,6 @@ import type {
 	TicketPriority,
 	TicketStatus,
 } from "../models/types";
-import { readDatabase, writeDatabase } from "../repositories/databaseRepository";
 import { generateId } from "../utils/generateId";
 import { createTicketEntity, type CreateTicketInput } from "./ticketFactory";
 
@@ -74,25 +73,6 @@ type CreateTicketResult =
 	| { success: true; ticket: Ticket }
 	| { success: false; message: string };
 
-export function createTicket(input: CreateTicketInput): CreateTicketResult {
-	const database = readDatabase();
-	const requester = database.users.find((user) => user.id === input.requesterId);
-
-	if (!requester) {
-		return { success: false, message: "Solicitante invalido" };
-	}
-
-	const ticket = createTicketEntity({
-		...input,
-		priority: calculatePriority(input.category, input.description),
-	});
-
-	database.tickets.push(ticket);
-	writeDatabase(database);
-
-	return { success: true, ticket };
-}
-
 interface CreateCommentInput {
 	ticketId: string;
 	authorId: string;
@@ -120,42 +100,6 @@ type UpdateTicketStatusResult =
 	| { success: true; ticket: Ticket }
 	| { success: false; statusCode: 400 | 404; message: string };
 
-export function updateTicketStatus(
-	input: UpdateTicketStatusInput,
-): UpdateTicketStatusResult {
-	const database = readDatabase();
-	const ticket = findTicketById(database, input.ticketId);
-
-	if (!ticket) {
-		return { success: false, statusCode: 404, message: "Ticket nao encontrado" };
-	}
-
-	if (input.status === "closed" && !input.comment) {
-		return {
-			success: false,
-			statusCode: 400,
-			message: "Informe um comentario para fechar o chamado",
-		};
-	}
-
-	ticket.status = input.status;
-	ticket.updatedAt = new Date().toISOString();
-
-	if (input.comment) {
-		database.comments.push(
-			createComment({
-				ticketId: ticket.id,
-				authorId: input.authorId || ticket.requesterId,
-				message: input.comment,
-			}),
-		);
-	}
-
-	writeDatabase(database);
-
-	return { success: true, ticket };
-}
-
 interface AddCommentToTicketInput {
 	ticketId: string;
 	authorId: string;
@@ -166,25 +110,103 @@ type AddCommentToTicketResult =
 	| { success: true; comment: TicketComment }
 	| { success: false; statusCode: 404; message: string };
 
-export function addCommentToTicket(
-	input: AddCommentToTicketInput,
-): AddCommentToTicketResult {
-	const database = readDatabase();
-	const ticket = findTicketById(database, input.ticketId);
+export interface TicketRepository {
+	readDatabase(): Database;
+	writeDatabase(database: Database): void;
+}
 
-	if (!ticket) {
-		return { success: false, statusCode: 404, message: "Ticket nao encontrado" };
+export function createTicketService(repository: TicketRepository) {
+	function createTicket(input: CreateTicketInput): CreateTicketResult {
+		const database = repository.readDatabase();
+		const requester = database.users.find(
+			(user) => user.id === input.requesterId,
+		);
+
+		if (!requester) {
+			return { success: false, message: "Solicitante invalido" };
+		}
+
+		const ticket = createTicketEntity({
+			...input,
+			priority: calculatePriority(input.category, input.description),
+		});
+
+		database.tickets.push(ticket);
+		repository.writeDatabase(database);
+
+		return { success: true, ticket };
 	}
 
-	const comment = createComment({
-		ticketId: ticket.id,
-		authorId: input.authorId,
-		message: input.message,
-	});
+	function updateTicketStatus(
+		input: UpdateTicketStatusInput,
+	): UpdateTicketStatusResult {
+		const database = repository.readDatabase();
+		const ticket = findTicketById(database, input.ticketId);
 
-	database.comments.push(comment);
-	ticket.updatedAt = new Date().toISOString();
-	writeDatabase(database);
+		if (!ticket) {
+			return {
+				success: false,
+				statusCode: 404,
+				message: "Ticket nao encontrado",
+			};
+		}
 
-	return { success: true, comment };
+		if (input.status === "closed" && !input.comment) {
+			return {
+				success: false,
+				statusCode: 400,
+				message: "Informe um comentario para fechar o chamado",
+			};
+		}
+
+		ticket.status = input.status;
+		ticket.updatedAt = new Date().toISOString();
+
+		if (input.comment) {
+			database.comments.push(
+				createComment({
+					ticketId: ticket.id,
+					authorId: input.authorId || ticket.requesterId,
+					message: input.comment,
+				}),
+			);
+		}
+
+		repository.writeDatabase(database);
+
+		return { success: true, ticket };
+	}
+
+	function addCommentToTicket(
+		input: AddCommentToTicketInput,
+	): AddCommentToTicketResult {
+		const database = repository.readDatabase();
+		const ticket = findTicketById(database, input.ticketId);
+
+		if (!ticket) {
+			return {
+				success: false,
+				statusCode: 404,
+				message: "Ticket nao encontrado",
+			};
+		}
+
+		const comment = createComment({
+			ticketId: ticket.id,
+			authorId: input.authorId,
+			message: input.message,
+		});
+
+		database.comments.push(comment);
+		ticket.updatedAt = new Date().toISOString();
+		repository.writeDatabase(database);
+
+		return { success: true, comment };
+	}
+
+	return {
+		createTicket,
+		updateTicketStatus,
+		addCommentToTicket,
+	};
 }

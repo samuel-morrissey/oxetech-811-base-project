@@ -1,11 +1,12 @@
 import { Router } from "express";
-import { readDatabase } from "../repositories/databaseRepository";
+import {
+	databaseRepository,
+	readDatabase,
+} from "../repositories/databaseRepository";
 import {
 	VALID_STATUSES,
 	findTicketById,
-	createTicket,
-	updateTicketStatus,
-	addCommentToTicket,
+	createTicketService,
 } from "../services/ticketService";
 import { toTicketDetailsDto, toTicketListItemDto } from "../dtos/ticketDto";
 import { toPublicUserDto } from "../dtos/userDto";
@@ -16,6 +17,7 @@ import {
 } from "../schemas/ticketSchemas";
 
 const router = Router();
+const ticketService = createTicketService(databaseRepository);
 
 
 router.get("/health", (_request, response) => {
@@ -105,7 +107,7 @@ router.post("/tickets", (request, response) => {
 		return;
 	}
 
-	const result = createTicket(parsedBody.data);
+	const result = ticketService.createTicket(parsedBody.data);
 
 	if (!result.success) {
 		response.status(400).json({ message: result.message });
@@ -128,7 +130,7 @@ router.patch("/tickets/:id/status", (request, response) => {
 	}
 
 	const body = parsedBody.data;
-	const result = updateTicketStatus({
+	const result = ticketService.updateTicketStatus({
 		ticketId: request.params.id,
 		status: body.status,
 		comment: body.comment,
@@ -155,7 +157,7 @@ router.post("/tickets/:id/comments", (request, response) => {
 	}
 
 	const body = parsedBody.data;
-	const result = addCommentToTicket({
+	const result = ticketService.addCommentToTicket({
 		ticketId: request.params.id,
 		authorId: body.authorId,
 		message: body.message,

@@ -13,3 +13,8 @@ export function readDatabase(): Database {
 export function writeDatabase(database: Database) {
 	fs.writeFileSync(databasePath, JSON.stringify(database, null, 2));
 }
+
+export const databaseRepository = {
+	readDatabase,
+	writeDatabase,
+};
