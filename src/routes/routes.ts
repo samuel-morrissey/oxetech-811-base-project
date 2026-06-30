@@ -1,5 +1,5 @@
 import { Router } from "express";
-import type { Ticket, TicketStatus } from "../types";
+import type { Ticket } from "../types";
 import { readDatabase, writeDatabase } from "../repositories/databaseRepository";
 import {
 	calculatePriority,
@@ -10,6 +10,11 @@ import {
 import { generateId } from "../utils/generateId";
 import { toTicketDetailsDto, toTicketListItemDto } from "../dtos/ticketDto";
 import { toPublicUserDto } from "../dtos/userDto";
+import {
+	createCommentSchema,
+	createTicketSchema,
+	updateTicketStatusSchema,
+} from "../schemas/ticketSchemas";
 
 const router = Router();
 
@@ -92,17 +97,17 @@ router.get("/tickets/:id", (request, response) => {
 
 router.post("/tickets", (request, response) => {
 	const database = readDatabase();
-	const body = request.body;
+	const parsedBody = createTicketSchema.safeParse(request.body);
 
-	if (!body.title || !body.description || !body.category || !body.requesterId) {
+	if (!parsedBody.success) {
 		response.status(400).json({
-			message: "Campos obrigatorios ausentes",
-			required: ["title", "description", "category", "requesterId"],
-			received: body,
+			message: "Dados invalidos",
+			errors: parsedBody.error.issues,
 		});
 		return;
 	}
 
+	const body = parsedBody.data;
 	const user = database.users.find((user) => user.id === body.requesterId);
 	if (!user) {
 		response.status(400).json({ message: "Solicitante invalido" });
@@ -132,21 +137,26 @@ router.post("/tickets", (request, response) => {
 router.patch("/tickets/:id/status", (request, response) => {
 	const database = readDatabase();
 	const ticket = findTicketById(database, request.params.id);
-	const newStatus = request.body.status as TicketStatus;
+	const parsedBody = updateTicketStatusSchema.safeParse(request.body);
 
 	if (!ticket) {
 		response.status(404).json({ message: "Ticket nao encontrado" });
 		return;
 	}
 
-	if (!VALID_STATUSES.includes(newStatus)) {
-		response
-			.status(400)
-			.json({ message: "Status invalido", allowed: VALID_STATUSES });
+	if (!parsedBody.success) {
+		response.status(400).json({
+			message: "Dados invalidos",
+			allowed: VALID_STATUSES,
+			errors: parsedBody.error.issues,
+		});
 		return;
 	}
 
-	if (newStatus === "closed" && !request.body.comment) {
+	const body = parsedBody.data;
+	const newStatus = body.status;
+
+	if (newStatus === "closed" && !body.comment) {
 		response
 			.status(400)
 			.json({ message: "Informe um comentario para fechar o chamado" });
@@ -156,12 +166,12 @@ router.patch("/tickets/:id/status", (request, response) => {
 	ticket.status = newStatus;
 	ticket.updatedAt = new Date().toISOString();
 
-	if (request.body.comment) {
+	if (body.comment) {
 		database.comments.push(
 			createComment({
 				ticketId: ticket.id,
-				authorId: request.body.authorId || ticket.requesterId,
-				message: request.body.comment,
+				authorId: body.authorId || ticket.requesterId,
+				message: body.comment,
 			}),
 		);
 	}
@@ -173,18 +183,22 @@ router.patch("/tickets/:id/status", (request, response) => {
 router.post("/tickets/:id/comments", (request, response) => {
 	const database = readDatabase();
 	const ticket = findTicketById(database, request.params.id);
-	const body = request.body;
+	const parsedBody = createCommentSchema.safeParse(request.body);
 
 	if (!ticket) {
 		response.status(404).json({ error: "Ticket nao encontrado" });
 		return;
 	}
 
-	if (!body.message || !body.authorId) {
-		response.status(400).json({ error: "Comentario e autor sao obrigatorios" });
+	if (!parsedBody.success) {
+		response.status(400).json({
+			error: "Comentario e autor sao obrigatorios",
+			errors: parsedBody.error.issues,
+		});
 		return;
 	}
 
+	const body = parsedBody.data;
 	const comment = createComment({
 		ticketId: ticket.id,
 		authorId: body.authorId,
