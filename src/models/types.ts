@@ -9,7 +9,7 @@ export interface User {
   name: string;
   email: string;
   role: UserRole;
-  password: string;
+  passwordHash: string;
 }
 
 export interface TicketComment {
