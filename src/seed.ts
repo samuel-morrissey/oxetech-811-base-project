@@ -1,28 +1,30 @@
 import fs from "node:fs";
 import path from "node:path";
+import bcrypt from "bcryptjs";
 
-const initialDatabase = {
-  users: [
+async function main() {
+  const initialDatabase = {
+    users: [
     {
       id: "user_ana",
       name: "Ana Beatriz",
       email: "ana.aluna@example.com",
       role: "student",
-      password: "123456",
+      passwordHash: await bcrypt.hash("123456", 10),
     },
     {
       id: "user_bruno",
       name: "Bruno Lima",
       email: "bruno.professor@example.com",
       role: "teacher",
-      password: "professor123",
+      passwordHash: await bcrypt.hash("professor123", 10),
     },
     {
       id: "user_carla",
       name: "Carla Suporte",
       email: "carla.suporte@example.com",
       role: "support",
-      password: "suporte123",
+      passwordHash: await bcrypt.hash("suporte123", 10),
     },
   ],
   tickets: [
@@ -79,11 +81,14 @@ const initialDatabase = {
       createdAt: "2026-05-04T09:00:00.000Z",
     },
   ],
-};
+  };
 
-const dataFile = process.env.DATA_FILE || "data/db.json";
-const databasePath = path.resolve(process.cwd(), dataFile);
-fs.mkdirSync(path.dirname(databasePath), { recursive: true });
-fs.writeFileSync(databasePath, JSON.stringify(initialDatabase, null, 2));
+  const dataFile = process.env.DATA_FILE || "data/db.json";
+  const databasePath = path.resolve(process.cwd(), dataFile);
+  fs.mkdirSync(path.dirname(databasePath), { recursive: true });
+  fs.writeFileSync(databasePath, JSON.stringify(initialDatabase, null, 2));
 
-console.log(`Banco de dados reiniciado em ${databasePath}`);
+  console.log(`Banco de dados reiniciado em ${databasePath}`);
+}
+
+main();
