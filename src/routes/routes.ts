@@ -1,13 +1,12 @@
 import { Router } from "express";
-import type { Ticket } from "../types";
-import { readDatabase, writeDatabase } from "../repositories/databaseRepository";
+import { readDatabase } from "../repositories/databaseRepository";
 import {
-	calculatePriority,
 	VALID_STATUSES,
 	findTicketById,
-	createComment,
+	createTicket,
+	updateTicketStatus,
+	addCommentToTicket,
 } from "../services/ticketService";
-import { generateId } from "../utils/generateId";
 import { toTicketDetailsDto, toTicketListItemDto } from "../dtos/ticketDto";
 import { toPublicUserDto } from "../dtos/userDto";
 import {
@@ -96,7 +95,6 @@ router.get("/tickets/:id", (request, response) => {
 });
 
 router.post("/tickets", (request, response) => {
-	const database = readDatabase();
 	const parsedBody = createTicketSchema.safeParse(request.body);
 
 	if (!parsedBody.success) {
@@ -107,42 +105,18 @@ router.post("/tickets", (request, response) => {
 		return;
 	}
 
-	const body = parsedBody.data;
-	const user = database.users.find((user) => user.id === body.requesterId);
-	if (!user) {
-		response.status(400).json({ message: "Solicitante invalido" });
+	const result = createTicket(parsedBody.data);
+
+	if (!result.success) {
+		response.status(400).json({ message: result.message });
 		return;
 	}
 
-	const now = new Date().toISOString();
-	const ticket: Ticket = {
-		id: generateId("ticket"),
-		title: body.title,
-		description: body.description,
-		category: body.category,
-		requesterId: body.requesterId,
-		assignedToId: body.assignedToId,
-		status: "open",
-		priority: calculatePriority(body.category, body.description),
-		createdAt: now,
-		updatedAt: now,
-	};
-
-	database.tickets.push(ticket);
-	writeDatabase(database);
-
-	response.status(201).json(ticket);
+	response.status(201).json(result.ticket);
 });
 
 router.patch("/tickets/:id/status", (request, response) => {
-	const database = readDatabase();
-	const ticket = findTicketById(database, request.params.id);
 	const parsedBody = updateTicketStatusSchema.safeParse(request.body);
-
-	if (!ticket) {
-		response.status(404).json({ message: "Ticket nao encontrado" });
-		return;
-	}
 
 	if (!parsedBody.success) {
 		response.status(400).json({
@@ -154,41 +128,23 @@ router.patch("/tickets/:id/status", (request, response) => {
 	}
 
 	const body = parsedBody.data;
-	const newStatus = body.status;
+	const result = updateTicketStatus({
+		ticketId: request.params.id,
+		status: body.status,
+		comment: body.comment,
+		authorId: body.authorId,
+	});
 
-	if (newStatus === "closed" && !body.comment) {
-		response
-			.status(400)
-			.json({ message: "Informe um comentario para fechar o chamado" });
+	if (!result.success) {
+		response.status(result.statusCode).json({ message: result.message });
 		return;
 	}
 
-	ticket.status = newStatus;
-	ticket.updatedAt = new Date().toISOString();
-
-	if (body.comment) {
-		database.comments.push(
-			createComment({
-				ticketId: ticket.id,
-				authorId: body.authorId || ticket.requesterId,
-				message: body.comment,
-			}),
-		);
-	}
-
-	writeDatabase(database);
-	response.json(ticket);
+	response.json(result.ticket);
 });
 
 router.post("/tickets/:id/comments", (request, response) => {
-	const database = readDatabase();
-	const ticket = findTicketById(database, request.params.id);
 	const parsedBody = createCommentSchema.safeParse(request.body);
-
-	if (!ticket) {
-		response.status(404).json({ error: "Ticket nao encontrado" });
-		return;
-	}
 
 	if (!parsedBody.success) {
 		response.status(400).json({
@@ -199,17 +155,18 @@ router.post("/tickets/:id/comments", (request, response) => {
 	}
 
 	const body = parsedBody.data;
-	const comment = createComment({
-		ticketId: ticket.id,
+	const result = addCommentToTicket({
+		ticketId: request.params.id,
 		authorId: body.authorId,
 		message: body.message,
 	});
 
-	database.comments.push(comment);
-	ticket.updatedAt = new Date().toISOString();
-	writeDatabase(database);
+	if (!result.success) {
+		response.status(result.statusCode).json({ error: result.message });
+		return;
+	}
 
-	response.status(201).json(comment);
+	response.status(201).json(result.comment);
 });
 
 export default router;
