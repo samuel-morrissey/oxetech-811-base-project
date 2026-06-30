@@ -3,13 +3,13 @@ import { toPublicUserDto } from "../../../src/dtos/userDto";
 import type { User } from "../../../src/models/types";
 
 describe("toPublicUserDto", () => {
-	it("removes password from user response", () => {
+	it("removes password hash from user response", () => {
 		const user: User = {
 			id: "user_1",
 			name: "Ana",
 			email: "ana@example.com",
 			role: "student",
-			password: "secret",
+			passwordHash: "hashed-secret",
 		};
 
 		const dto = toPublicUserDto(user);
@@ -20,6 +20,6 @@ describe("toPublicUserDto", () => {
 			email: "ana@example.com",
 			role: "student",
 		});
-		expect("password" in dto).toBe(false);
+		expect("passwordHash" in dto).toBe(false);
 	});
 });

@@ -14,14 +14,14 @@ function createDatabase(): Database {
 				name: "Ana",
 				email: "ana@example.com",
 				role: "student",
-				password: "secret",
+				passwordHash: "hashed-secret",
 			},
 			{
 				id: "support_1",
 				name: "Bruno",
 				email: "bruno@example.com",
 				role: "support",
-				password: "secret",
+				passwordHash: "hashed-secret",
 			},
 		],
 		tickets: [

@@ -16,14 +16,14 @@ function createTestDatabase(): Database {
 				name: "Ana",
 				email: "ana@example.com",
 				role: "student",
-				password: "secret",
+				passwordHash: "hashed-secret",
 			},
 			{
 				id: "user_carla",
 				name: "Carla",
 				email: "carla@example.com",
 				role: "support",
-				password: "secret",
+				passwordHash: "hashed-secret",
 			},
 		],
 		tickets: [
@@ -80,7 +80,7 @@ describe("API routes", () => {
 		});
 	});
 
-	it("does not expose user passwords", async () => {
+	it("does not expose user password hashes", async () => {
 		const response = await request(app).get("/api/users");
 
 		expect(response.status).toBe(200);
@@ -90,7 +90,7 @@ describe("API routes", () => {
 			email: "ana@example.com",
 			role: "student",
 		});
-		expect("password" in response.body[0]).toBe(false);
+		expect("passwordHash" in response.body[0]).toBe(false);
 	});
 
 	it("rejects invalid ticket creation body", async () => {
