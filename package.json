@@ -13,6 +13,7 @@
     "typecheck": "tsc --noEmit",
     "seed": "tsx src/seed.ts",
     "test": "jest",
+    "test:coverage": "jest --coverage",
     "test:watch": "jest --watch"
   },
   "dependencies": {
