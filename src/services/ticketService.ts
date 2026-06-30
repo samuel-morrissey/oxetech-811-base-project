@@ -5,6 +5,12 @@ import type {
 	TicketPriority,
 	TicketStatus,
 } from "../models/types";
+import {
+	toTicketDetailsDto,
+	toTicketListItemDto,
+	type TicketDetailsDto,
+	type TicketListItemDto,
+} from "../dtos/ticketDto";
 import { generateId } from "../utils/generateId";
 import { createTicketEntity, type CreateTicketInput } from "./ticketFactory";
 
@@ -73,6 +79,18 @@ type CreateTicketResult =
 	| { success: true; ticket: Ticket }
 	| { success: false; message: string };
 
+interface ListTicketsFilters {
+	status?: string;
+	category?: string;
+	search?: string;
+}
+
+type TicketSummary = Record<TicketStatus, number> & { urgent: number };
+
+type GetTicketDetailsResult =
+	| { success: true; ticket: TicketDetailsDto }
+	| { success: false; statusCode: 404; message: string };
+
 interface CreateCommentInput {
 	ticketId: string;
 	authorId: string;
@@ -116,6 +134,67 @@ export interface TicketRepository {
 }
 
 export function createTicketService(repository: TicketRepository) {
+	function listTickets(filters: ListTicketsFilters): TicketListItemDto[] {
+		const database = repository.readDatabase();
+		let tickets = database.tickets;
+
+		if (filters.status) {
+			tickets = tickets.filter((ticket) => ticket.status === filters.status);
+		}
+
+		if (filters.category) {
+			tickets = tickets.filter((ticket) => ticket.category === filters.category);
+		}
+
+		if (filters.search) {
+			const search = filters.search.toLowerCase();
+			tickets = tickets.filter(
+				(ticket) =>
+					ticket.title.toLowerCase().includes(search) ||
+					ticket.description.toLowerCase().includes(search) ||
+					ticket.category.toLowerCase().includes(search),
+			);
+		}
+
+		return tickets.map((ticket) => toTicketListItemDto(ticket, database));
+	}
+
+	function getTicketSummary(): TicketSummary {
+		const database = repository.readDatabase();
+		const summary: TicketSummary = {
+			open: 0,
+			in_progress: 0,
+			resolved: 0,
+			closed: 0,
+			urgent: 0,
+		};
+
+		for (const ticket of database.tickets) {
+			summary[ticket.status]++;
+
+			if (ticket.priority === "urgent") {
+				summary.urgent++;
+			}
+		}
+
+		return summary;
+	}
+
+	function getTicketDetails(ticketId: string): GetTicketDetailsResult {
+		const database = repository.readDatabase();
+		const ticket = findTicketById(database, ticketId);
+
+		if (!ticket) {
+			return {
+				success: false,
+				statusCode: 404,
+				message: "Ticket nao encontrado",
+			};
+		}
+
+		return { success: true, ticket: toTicketDetailsDto(ticket, database) };
+	}
+
 	function createTicket(input: CreateTicketInput): CreateTicketResult {
 		const database = repository.readDatabase();
 		const requester = database.users.find(
@@ -205,6 +284,9 @@ export function createTicketService(repository: TicketRepository) {
 	}
 
 	return {
+		listTickets,
+		getTicketSummary,
+		getTicketDetails,
 		createTicket,
 		updateTicketStatus,
 		addCommentToTicket,
