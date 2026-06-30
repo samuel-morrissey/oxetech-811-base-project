@@ -1,10 +1,10 @@
 import { describe, expect, it, jest } from "@jest/globals";
 import type { Database } from "../../../src/models/types";
 import {
-	calculatePriority,
 	createTicketService,
 	type TicketRepository,
 } from "../../../src/services/ticketService";
+import { calculatePriority } from "../../../src/services/ticketPriorityService";
 
 function createDatabase(): Database {
 	return {
