@@ -1,6 +1,7 @@
 import { Router } from "express";
 import type { Request } from "express";
 import type { z } from "zod";
+import type { TicketStatus } from "../models/types";
 import {
 	databaseRepository,
 	readDatabase,
@@ -70,7 +71,7 @@ router.get("/tickets", (request, response) => {
 
 router.get("/tickets/summary", (_request, response) => {
 	const database = readDatabase();
-	const summary = {
+	const summary: Record<TicketStatus, number> & { urgent: number } = {
 		open: 0,
 		in_progress: 0,
 		resolved: 0,
@@ -79,11 +80,11 @@ router.get("/tickets/summary", (_request, response) => {
 	};
 
 	for (const ticket of database.tickets) {
-		if (ticket.status === "open") summary.open++;
-		if (ticket.status === "in_progress") summary.in_progress++;
-		if (ticket.status === "resolved") summary.resolved++;
-		if (ticket.status === "closed") summary.closed++;
-		if (ticket.priority === "urgent") summary.urgent++;
+		summary[ticket.status]++;
+
+		if (ticket.priority === "urgent") {
+			summary.urgent++;
+		}
 	}
 
 	response.json(summary);
