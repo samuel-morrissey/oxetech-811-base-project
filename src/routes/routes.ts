@@ -1,19 +1,30 @@
-import { Router } from "express";
+import { type RequestHandler, Router } from "express";
+import { AuthController } from "../controllers/AuthController";
 import { HealthController } from "../controllers/HealthController";
 import { TicketController } from "../controllers/TicketController";
 import { UserController } from "../controllers/UserController";
 
 export interface RouterControllers {
   healthController: HealthController;
+  authController: AuthController;
   userController: UserController;
   ticketController: TicketController;
+  requireAuth: RequestHandler;
 }
 
 export function createRouter(controllers: RouterControllers): Router {
-  const { healthController, userController, ticketController } = controllers;
+  const { healthController, authController, userController, ticketController, requireAuth } = controllers;
   const router = Router();
 
+  // Rotas publicas: nao exigem sessao.
   router.get("/health", healthController.check);
+  router.post("/auth/login", authController.login);
+  router.post("/auth/logout", authController.logout);
+
+  // A partir daqui todas as rotas exigem um usuario autenticado.
+  router.use(requireAuth);
+
+  router.get("/auth/me", authController.me);
 
   router.get("/users", userController.list);
 

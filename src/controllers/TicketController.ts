@@ -101,27 +101,24 @@ export class TicketController {
   create = async (request: Request, response: Response) => {
     const body = request.body;
 
-    if (!body.title || !body.description || !body.category || !body.requesterId) {
+    if (!body.title || !body.description || !body.category) {
       response.status(400).json({
         message: "Campos obrigatorios ausentes",
-        required: ["title", "description", "category", "requesterId"],
+        required: ["title", "description", "category"],
         received: body,
       });
       return;
     }
 
-    const user = await this.users.findById(body.requesterId);
-    if (!user) {
-      response.status(400).json({ message: "Solicitante invalido" });
-      return;
-    }
+    // Autoria: o solicitante e sempre o usuario autenticado (nao vem do body).
+    const requester = request.user!;
 
     const now = new Date().toISOString();
     const ticket = TicketFactory.create({
       title: body.title,
       description: body.description,
       category: body.category,
-      requesterId: body.requesterId,
+      requesterId: requester.id,
       assignedToId: body.assignedToId,
       status: "open",
       createdAt: now,
@@ -161,7 +158,8 @@ export class TicketController {
       await this.comments.add({
         id: generateId("comment"),
         ticketId: ticket.id,
-        authorId: request.body.authorId || ticket.requesterId,
+        // Autoria: o comentario e do usuario autenticado que mudou o status.
+        authorId: request.user!.id,
         message: request.body.comment,
         createdAt: new Date().toISOString(),
       });
@@ -180,15 +178,16 @@ export class TicketController {
       return;
     }
 
-    if (!body.message || !body.authorId) {
-      response.status(400).json({ error: "Comentario e autor sao obrigatorios" });
+    if (!body.message) {
+      response.status(400).json({ error: "Comentario e obrigatorio" });
       return;
     }
 
     const comment = {
       id: generateId("comment"),
       ticketId: ticket.id,
-      authorId: body.authorId,
+      // Autoria: o comentario e sempre do usuario autenticado.
+      authorId: request.user!.id,
       message: body.message,
       createdAt: new Date().toISOString(),
     };

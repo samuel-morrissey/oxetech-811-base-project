@@ -65,6 +65,8 @@ const tickets: Prisma.TicketCreateManyInput[] = [
   },
 ];
 
+// Cada comentario aponta para o ticket (ticketId) e para o autor (authorId),
+// deixando explicito o vinculo usuario -> comentario.
 const comments: Prisma.TicketCommentCreateManyInput[] = [
   {
     id: "comment_001",
@@ -80,6 +82,13 @@ const comments: Prisma.TicketCommentCreateManyInput[] = [
     message: "O prazo final esta registrado no ambiente virtual da disciplina.",
     createdAt: "2026-05-04T09:00:00.000Z",
   },
+  {
+    id: "comment_003",
+    ticketId: "ticket_001",
+    authorId: "user_ana",
+    message: "Continuo sem acesso mesmo apos redefinir a senha.",
+    createdAt: "2026-05-01T11:30:00.000Z",
+  },
 ];
 
 async function main() {
@@ -93,6 +102,10 @@ async function main() {
   await prisma.ticketComment.createMany({ data: comments });
 
   console.log("Banco de dados populado com sucesso.");
+  console.log("\nCredenciais para login (POST /api/auth/login):");
+  for (const user of users) {
+    console.log(`  ${user.email} / ${user.password} (${user.role})`);
+  }
 }
 
 main()

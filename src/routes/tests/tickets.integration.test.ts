@@ -18,6 +18,9 @@ class InMemoryUserRepository implements UserRepository {
   async findById(id: string): Promise<User | undefined> {
     return this.users.find((user) => user.id === id);
   }
+  async findByEmail(email: string): Promise<User | undefined> {
+    return this.users.find((user) => user.email === email);
+  }
 }
 
 class InMemoryTicketRepository implements TicketRepository {
@@ -71,6 +74,17 @@ function buildApp() {
   });
 }
 
+// Faz login e devolve um agente do supertest que guarda o cookie de sessao,
+// da mesma forma que o Postman/Bruno fariam automaticamente entre requisicoes.
+async function login(app: ReturnType<typeof buildApp>) {
+  const agent = request.agent(app);
+  const response = await agent
+    .post("/api/auth/login")
+    .send({ email: "ana.aluna@example.com", password: "123456" });
+  expect(response.status).toBe(200);
+  return agent;
+}
+
 describe("POST /api/tickets", () => {
   let app: ReturnType<typeof buildApp>;
 
@@ -78,18 +92,20 @@ describe("POST /api/tickets", () => {
     app = buildApp();
   });
 
-  test("cria um ticket com sucesso e retorna 201", async () => {
-    const response = await request(app).post("/api/tickets").send({
+  test("cria um ticket com sucesso e retorna 201 (autoria vem da sessao)", async () => {
+    const agent = await login(app);
+
+    const response = await agent.post("/api/tickets").send({
       title: "Nao consigo acessar o portal",
       description: "Aparece erro ao tentar logar.",
       category: "sistemas",
-      requesterId: "user_ana",
     });
 
     expect(response.status).toBe(201);
     expect(response.body).toMatchObject({
       title: "Nao consigo acessar o portal",
       category: "sistemas",
+      // O solicitante nao vem do body: e o usuario autenticado.
       requesterId: "user_ana",
       status: "open",
     });
@@ -99,7 +115,9 @@ describe("POST /api/tickets", () => {
   });
 
   test("retorna 400 quando faltam campos obrigatorios", async () => {
-    const response = await request(app).post("/api/tickets").send({
+    const agent = await login(app);
+
+    const response = await agent.post("/api/tickets").send({
       title: "So o titulo foi enviado",
     });
 
@@ -107,15 +125,14 @@ describe("POST /api/tickets", () => {
     expect(response.body.message).toBe("Campos obrigatorios ausentes");
   });
 
-  test("retorna 400 quando o solicitante (requesterId) nao existe", async () => {
+  test("retorna 401 quando nao ha sessao (sem cookie)", async () => {
     const response = await request(app).post("/api/tickets").send({
-      title: "Ticket com solicitante invalido",
-      description: "Esse usuario nao existe no banco.",
+      title: "Ticket sem estar logado",
+      description: "Nao deveria ser criado.",
       category: "sistemas",
-      requesterId: "user_inexistente",
     });
 
-    expect(response.status).toBe(400);
-    expect(response.body.message).toBe("Solicitante invalido");
+    expect(response.status).toBe(401);
+    expect(response.body.message).toBe("Nao autenticado");
   });
 });
