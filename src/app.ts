@@ -1,10 +1,9 @@
 import cors from "cors";
 import express from "express";
-import EventEmitter from "events";
 import router from "./routes/routes";
+import { dispatcher } from "./events/dispatcher";
 import { EmailService } from "./services/email/EmailService";
 
-const dispatcher = new EventEmitter();
 const emailService = new EmailService();
 
 dispatcher.on("ticket.created", (ticket) => {

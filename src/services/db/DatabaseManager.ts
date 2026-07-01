@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import { Database } from "../types/types";
+import { Database } from "../../types/types";
 import { ContentAdapter } from "./ContentAdapter";
 
 export class DatabaseManager {

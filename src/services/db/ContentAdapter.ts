@@ -1,4 +1,4 @@
-import { Database } from "../types/types";
+import { Database } from "../../types/types";
 import fs from "node:fs";
 
 export class ContentAdapter {

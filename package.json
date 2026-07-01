@@ -12,7 +12,7 @@
     "build": "tsc",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src",
-    "seed": "tsx src/seed.ts",
+    "seed": "tsx src/services/db/seed.ts",
     "test": "jest",
     "test:unit": "jest src/core",
     "test:integration": "jest src/routes"
