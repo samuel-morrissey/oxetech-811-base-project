@@ -1,8 +1,13 @@
 import request from "supertest";
-import { describe, expect, test } from "@jest/globals";
+import { describe, expect, test, beforeAll } from "@jest/globals";
 import app from "../../app";
 
 describe("Health Route", () => {
+    beforeAll(() => {
+        // Set the environment variable for the test database file
+        process.env.DATA_FILE = "src/tests/repository/db.test.json";
+    });
+
     test("should return the API status", async () => {
         // Act
         const response = await request(app).get("/api/health");
@@ -18,6 +23,10 @@ describe("Health Route", () => {
 });
 
 describe("Get /Tickets Route", () => {
+    beforeAll(() => {
+        // Set the environment variable for the test database file
+        process.env.DATA_FILE = "src/tests/repository/db.test.json";
+    });
     test("should return all tickets", async () => {
         // Act
         const response = await request(app).get("/api/tickets");
@@ -66,3 +75,35 @@ describe("Get /Tickets Route", () => {
 
 });
 
+describe("Get /tickets/summary Route", () => {
+    beforeAll(() => {
+        // Set the environment variable for the test database file
+        process.env.DATA_FILE = "src/tests/repository/db.test.json";
+    });
+
+    test("should return the summary of tickets", async () => {
+        // Act
+        const response = await request(app).get("/api/tickets/summary");
+
+        // Assert
+        expect(response.status).toBe(200);
+        expect(response.body).toHaveProperty("open");
+        expect(response.body).toHaveProperty("in_progress");
+        expect(response.body).toHaveProperty("resolved");
+        expect(response.body).toHaveProperty("closed");
+        expect(response.body).toHaveProperty("urgent");
+
+        expect(typeof response.body.open).toBe("number");
+        expect(typeof response.body.in_progress).toBe("number");
+        expect(typeof response.body.resolved).toBe("number");
+        expect(typeof response.body.closed).toBe("number");
+        expect(typeof response.body.urgent).toBe("number");
+
+        expect(response.body.open).toBe(8);
+        expect(response.body.in_progress).toBe(2);
+        expect(response.body.resolved).toBe(1);
+        expect(response.body.closed).toBe(0);
+        expect(response.body.urgent).toBe(1);
+    });
+
+});
