@@ -31,4 +31,9 @@ export class DatabaseManager {
             JSON.stringify(database, null, 2)
         );
     }
+
+    static generateId(prefix: string) {
+        return `${prefix}_${Date.now()}_${Math.floor(Math.random() * 10000)}`;
+    }
+
 }
