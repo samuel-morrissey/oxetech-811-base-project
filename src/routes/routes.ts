@@ -18,27 +18,7 @@ router.get("/users", (_request, response) => {
 });
 
 router.get("/tickets", TicketController.getAllTickets);
-
-router.get("/tickets/summary", (_request, response) => {
-  const database = DatabaseManager.getInstance().readDatabase();
-  const summary = {
-    open: 0,
-    in_progress: 0,
-    resolved: 0,
-    closed: 0,
-    urgent: 0,
-  };
-
-  for (const ticket of database.tickets) {
-    if (ticket.status === "open") summary.open++;
-    if (ticket.status === "in_progress") summary.in_progress++;
-    if (ticket.status === "resolved") summary.resolved++;
-    if (ticket.status === "closed") summary.closed++;
-    if (ticket.priority === "urgent") summary.urgent++;
-  }
-
-  response.json(summary);
-});
+router.get("/tickets/summary", TicketController.getSummary);
 
 router.get("/tickets/:id", (request, response) => {
   const database = DatabaseManager.getInstance().readDatabase();

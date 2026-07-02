@@ -8,7 +8,12 @@ export class TicketController {
         const result = TicketService.getAllTickets(request.query.status, request.query.category, request.query.search);
         response.json(result);
     }
+
+    static getSummary(request: any, response: any) {
+        response.json(TicketService.getSummary());
+    }
 }
+
 
 
 
