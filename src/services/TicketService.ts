@@ -56,8 +56,6 @@ export class TicketService {
         return result;
     }
 
-
-
     static getSummary() {
         const database = DatabaseManager.getInstance().readDatabase();
         const summary = {
@@ -77,6 +75,31 @@ export class TicketService {
         }
 
         return summary;
+    }
+
+    static getTicketById(ticketId: string) {
+        const database = DatabaseManager.getInstance().readDatabase();
+        const ticket = database.tickets.find((item) => item.id === ticketId);
+
+        if (!ticket) {
+            return null;
+        }
+
+        const requester = database.users.find((user) => user.id === ticket.requesterId);
+        const assigned = database.users.find((user) => user.id === ticket.assignedToId);
+        const comments = database.comments
+            .filter((comment) => comment.ticketId === ticket.id)
+            .map((comment) => ({
+                ...comment,
+                author: database.users.find((user) => user.id === comment.authorId),
+            }));
+
+        return {
+            ...ticket,
+            requester,
+            assigned,
+            comments,
+        };
     }
 
 }

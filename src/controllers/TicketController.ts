@@ -12,6 +12,17 @@ export class TicketController {
     static getSummary(request: any, response: any) {
         response.json(TicketService.getSummary());
     }
+
+    static getTicketById(request: any, response: any) {
+        const ticket = TicketService.getTicketById(request.params.id);
+
+        if (!ticket) {
+            response.status(404).json({ "error": "Ticket nao encontrado", "id": request.params.id });
+            return;
+        }
+
+        response.json(ticket);
+    }
 }
 
 

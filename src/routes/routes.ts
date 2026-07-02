@@ -19,27 +19,7 @@ router.get("/users", (_request, response) => {
 
 router.get("/tickets", TicketController.getAllTickets);
 router.get("/tickets/summary", TicketController.getSummary);
-
-router.get("/tickets/:id", (request, response) => {
-  const database = DatabaseManager.getInstance().readDatabase();
-  const ticket = database.tickets.find((item) => item.id === request.params.id);
-
-  if (!ticket) {
-    response.status(404).json({ error: "Ticket nao encontrado", id: request.params.id });
-    return;
-  }
-
-  const requester = database.users.find((user) => user.id === ticket.requesterId);
-  const assigned = database.users.find((user) => user.id === ticket.assignedToId);
-  const comments = database.comments
-    .filter((comment) => comment.ticketId === ticket.id)
-    .map((comment) => ({
-      ...comment,
-      author: database.users.find((user) => user.id === comment.authorId),
-    }));
-
-  response.json({ ...ticket, requester, assigned, comments });
-});
+router.get("/tickets/:id", TicketController.getTicketById);
 
 router.post("/tickets", (request, response) => {
   const database = DatabaseManager.getInstance().readDatabase();
