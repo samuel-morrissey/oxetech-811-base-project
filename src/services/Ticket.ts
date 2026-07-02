@@ -35,7 +35,6 @@ export class Ticket {
         this.createdAt = params.createdAt;
         this.updatedAt = params.updatedAt;
     }
-
 }
 
 
