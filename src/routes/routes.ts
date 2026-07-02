@@ -1,7 +1,8 @@
 import { Router } from "express";
-import { calculateTicketPriority, generateId } from "../services";
 import type { Ticket, TicketStatus } from "../types";
 import { DatabaseManager } from "../repository";
+import { TicketController } from "../controllers/TicketController";
+import { TicketFactory } from "../services/TicketFactory";
 
 
 const router = Router();
@@ -16,43 +17,7 @@ router.get("/users", (_request, response) => {
   response.json(database.users);
 });
 
-router.get("/tickets", (request, response) => {
-  const database = DatabaseManager.getInstance().readDatabase();
-  let tickets = database.tickets;
-
-  if (request.query.status) {
-    tickets = tickets.filter((ticket) => ticket.status === request.query.status);
-  }
-
-  if (request.query.category) {
-    tickets = tickets.filter((ticket) => ticket.category === request.query.category);
-  }
-
-  if (request.query.search) {
-    const search = String(request.query.search).toLowerCase();
-    tickets = tickets.filter(
-      (ticket) =>
-        ticket.title.toLowerCase().includes(search) ||
-        ticket.description.toLowerCase().includes(search) ||
-        ticket.category.toLowerCase().includes(search),
-    );
-  }
-
-  const result = tickets.map((ticket) => {
-    const requester = database.users.find((user) => user.id === ticket.requesterId);
-    const assigned = database.users.find((user) => user.id === ticket.assignedToId);
-    const comments = database.comments.filter((comment) => comment.ticketId === ticket.id);
-
-    return {
-      ...ticket,
-      requester,
-      assigned,
-      commentsCount: comments.length,
-    };
-  });
-
-  response.json(result);
-});
+router.get("/tickets", TicketController.getAllTickets);
 
 router.get("/tickets/summary", (_request, response) => {
   const database = DatabaseManager.getInstance().readDatabase();
@@ -116,18 +81,17 @@ router.post("/tickets", (request, response) => {
   }
 
   const now = new Date().toISOString();
-  const ticket: Ticket = {
-    id: generateId("ticket"),
+  const ticket = TicketFactory.create({
     title: body.title,
     description: body.description,
     category: body.category,
     requesterId: body.requesterId,
     assignedToId: body.assignedToId,
     status: "open",
-    priority: calculateTicketPriority(body.category, body.description),
     createdAt: now,
     updatedAt: now,
-  };
+  });
+
 
   database.tickets.push(ticket);
   DatabaseManager.getInstance().writeDatabase(database);
@@ -161,7 +125,7 @@ router.patch("/tickets/:id/status", (request, response) => {
 
   if (request.body.comment) {
     database.comments.push({
-      id: generateId("comment"),
+      id: DatabaseManager.generateId("comment"),
       ticketId: ticket.id,
       authorId: request.body.authorId || ticket.requesterId,
       message: request.body.comment,
@@ -189,7 +153,7 @@ router.post("/tickets/:id/comments", (request, response) => {
   }
 
   const comment = {
-    id: generateId("comment"),
+    id: DatabaseManager.generateId("comment"),
     ticketId: ticket.id,
     authorId: body.authorId,
     message: body.message,

@@ -1,4 +1,4 @@
-import type { TicketPriority, TicketCategory } from "./types";
+import type { TicketPriority, TicketCategory } from "../types";
 
 interface TicketPriorityPolice {
     isAplicable(category: TicketCategory, description: string): boolean;
@@ -63,8 +63,6 @@ export function calculateTicketPriority(category: TicketCategory, description: s
 
 }
 
-export function generateId(prefix: string) {
-    return `${prefix}_${Date.now()}_${Math.floor(Math.random() * 10000)}`;
-}
+
 
 
