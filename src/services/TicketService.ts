@@ -147,15 +147,15 @@ export class TicketService {
         const ticket = database.tickets.find((item) => item.id === ticketId);
 
         if (!ticket) {
-            return { success: false, message: "Ticket nao encontrado" };
+            return { success: false, error: "Ticket nao encontrado" };
         }
 
         if (!["open", "in_progress", "resolved", "closed"].includes(newStatus)) {
-            return { success: false, message: "Status invalido", allowed: ["open", "in_progress", "resolved", "closed"] };
+            return { success: false, error: "Status invalido", allowed: ["open", "in_progress", "resolved", "closed"] };
         }
 
         if (newStatus === "closed" && !comment) {
-            return { success: false, message: "Informe um comentario para fechar o chamado" };
+            return { success: false, error: "Informe um comentario para fechar o chamado" };
         }
 
         ticket.status = newStatus;
@@ -173,5 +173,33 @@ export class TicketService {
 
         DatabaseManager.getInstance().writeDatabase(database);
         return { success: true, ticket };
+    }
+
+    static postTicketComment(ticketId: string, authorId: string, message: string) {
+        const database = DatabaseManager.getInstance().readDatabase();
+        const ticket = database.tickets.find((item) => item.id === ticketId);
+
+        if (!ticket) {
+            return { success: false, error: "Ticket nao encontrado" };
+        }
+
+        if (!message || !authorId) {
+            return { success: false, error: "Comentario e autor sao obrigatorios" };
+
+        }
+
+        const comment = {
+            id: DatabaseManager.generateId("comment"),
+            ticketId: ticket.id,
+            authorId: authorId,
+            message: message,
+            createdAt: new Date().toISOString(),
+        };
+
+        database.comments.push(comment);
+        ticket.updatedAt = new Date().toISOString();
+        DatabaseManager.getInstance().writeDatabase(database);
+
+        return { success: true, comment };
     }
 }

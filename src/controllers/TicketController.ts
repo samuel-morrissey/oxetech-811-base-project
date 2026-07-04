@@ -1,7 +1,6 @@
-import type { Ticket, TicketStatus } from "../types";
+import type { TicketStatus } from "../types";
 import { DatabaseManager, } from "../repository";
 import { TicketService } from "../services/TicketService";
-import { TicketFactory } from "../services/TicketFactory";
 
 
 export class TicketController {
@@ -72,22 +71,42 @@ export class TicketController {
         const result = TicketService.patchTicketStatus(ticketId, newStatus, comment, authorId);
 
         if (!result.success) {
-            if (result.message === "Ticket nao encontrado") {
-                return response.status(404).json({ message: result.message });
+            if (result.error === "Ticket nao encontrado") {
+                return response.status(404).json({ error: result.error });
             }
 
             if (result.allowed) {
-                return response.status(400).json({ message: result.message, allowed: result.allowed });
+                return response.status(400).json({ error: result.error, allowed: result.allowed });
             }
 
-            return response.status(400).json({ message: result.message });
+            return response.status(400).json({ error: result.error });
         }
 
         response.json(result.ticket);
     }
 
+    static postTicketComment(request: any, response: any) {
+        const ticketId = request.params.id;
+        const authorId = request.body.authorId;
+        const message = request.body.message;
+
+        const result = TicketService.postTicketComment(ticketId, authorId, message);
+
+        if (!result.success) {
+            if (result.error === "Ticket nao encontrado") {
+                response.status(404).json({ error: result.error });
+                return;
+            }
+
+            if (result.error === "Comentario e autor sao obrigatorios") {
+                response.status(400).json({ error: result.error });
+                return;
+            }
+
+        }
+
+        response.status(201).json(result.comment);
+    }
 }
-
-
 
 

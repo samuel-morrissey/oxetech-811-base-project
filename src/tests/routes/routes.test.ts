@@ -346,7 +346,7 @@ describe("patch /tickets/:id/status Route", () => {
         // Assert
         expect(response.status).toBe(404);
         expect(response.body).toEqual({
-            message: "Ticket nao encontrado",
+            error: "Ticket nao encontrado",
         });
     });
 
@@ -365,7 +365,7 @@ describe("patch /tickets/:id/status Route", () => {
         // Assert
         expect(response.status).toBe(400);
         expect(response.body).toEqual({
-            message: "Status invalido",
+            error: "Status invalido",
             allowed: ["open", "in_progress", "resolved", "closed"],
         });
     });
@@ -384,7 +384,7 @@ describe("patch /tickets/:id/status Route", () => {
         // Assert
         expect(response.status).toBe(400);
         expect(response.body).toEqual({
-            message: "Informe um comentario para fechar o chamado",
+            error: "Informe um comentario para fechar o chamado",
         });
     });
 });

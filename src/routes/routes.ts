@@ -13,6 +13,9 @@ router.get("/tickets/summary", TicketController.getSummary);
 router.get("/tickets/:id", TicketController.getTicketById);
 router.post("/tickets", TicketController.postTicket);
 router.patch("/tickets/:id/status", TicketController.patchTicketStatus);
+router.post("/tickets/:id/comments", TicketController.postTicketComment);
+
+/*
 
 router.post("/tickets/:id/comments", (request, response) => {
   const database = DatabaseManager.getInstance().readDatabase();
@@ -44,4 +47,5 @@ router.post("/tickets/:id/comments", (request, response) => {
   response.status(201).json(comment);
 });
 
+*/
 export default router;
