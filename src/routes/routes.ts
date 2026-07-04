@@ -4,7 +4,6 @@ import { DatabaseManager } from "../repository";
 import { TicketController } from "../controllers/TicketController";
 import { TicketFactory } from "../services/TicketFactory";
 
-
 const router = Router();
 
 router.get("/health", TicketController.getHealth);
