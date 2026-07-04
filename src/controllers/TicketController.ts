@@ -5,6 +5,15 @@ import { TicketFactory } from "../services/TicketFactory";
 
 
 export class TicketController {
+    static getHealth(request: any, response: any) {
+        response.json({ status: "ok", service: "oxetech-helpdesk" });
+    }
+
+    static getAllUsers(request: any, response: any) {
+        const database = DatabaseManager.getInstance().readDatabase();
+        response.json(database.users);
+    }
+
     static getAllTickets(request: any, response: any) {
         const result = TicketService.getAllTickets(request.query.status, request.query.category, request.query.search);
         response.json(result);

@@ -7,16 +7,8 @@ import { TicketFactory } from "../services/TicketFactory";
 
 const router = Router();
 
-router.get("/health", (_request, response) => {
-  response.json({ status: "ok", service: "oxetech-helpdesk" });
-});
-
-router.get("/users", (_request, response) => {
-  const database = DatabaseManager.getInstance().readDatabase();
-
-  response.json(database.users);
-});
-
+router.get("/health", TicketController.getHealth);
+router.get("/users", TicketController.getAllUsers);
 router.get("/tickets", TicketController.getAllTickets);
 router.get("/tickets/summary", TicketController.getSummary);
 router.get("/tickets/:id", TicketController.getTicketById);
