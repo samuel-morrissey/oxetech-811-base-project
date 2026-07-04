@@ -20,45 +20,7 @@ router.get("/users", (_request, response) => {
 router.get("/tickets", TicketController.getAllTickets);
 router.get("/tickets/summary", TicketController.getSummary);
 router.get("/tickets/:id", TicketController.getTicketById);
-
-router.post("/tickets", (request, response) => {
-  const database = DatabaseManager.getInstance().readDatabase();
-  const body = request.body;
-
-  if (!body.title || !body.description || !body.category || !body.requesterId) {
-    response.status(400).json({
-      message: "Campos obrigatorios ausentes",
-      required: ["title", "description", "category", "requesterId"],
-      received: body,
-    });
-    return;
-  }
-
-  const user = database.users.find((item) => item.id === body.requesterId);
-  if (!user) {
-    response.status(400).json({ message: "Solicitante invalido" });
-    return;
-  }
-
-  const now = new Date().toISOString();
-  const ticket = TicketFactory.create({
-    title: body.title,
-    description: body.description,
-    category: body.category,
-    requesterId: body.requesterId,
-    assignedToId: body.assignedToId,
-    status: "open",
-    createdAt: now,
-    updatedAt: now,
-  });
-
-
-  database.tickets.push(ticket);
-  DatabaseManager.getInstance().writeDatabase(database);
-
-  response.status(201).json(ticket);
-});
-
+router.post("/tickets", TicketController.postTicket);
 
 router.patch("/tickets/:id/status", (request, response) => {
   const database = DatabaseManager.getInstance().readDatabase();

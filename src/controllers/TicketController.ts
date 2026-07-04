@@ -1,6 +1,7 @@
 import type { Ticket, TicketStatus } from "../types";
 import { DatabaseManager, } from "../repository";
 import { TicketService } from "../services/TicketService";
+import { TicketFactory } from "../services/TicketFactory";
 
 
 export class TicketController {
@@ -22,6 +23,35 @@ export class TicketController {
         }
 
         response.json(ticket);
+    }
+
+    static postTicket(request: any, response: any) {
+        const body = request.body;
+
+        if (!body.title || !body.description || !body.category || !body.requesterId) {
+            response.status(400).json({
+                message: "Campos obrigatorios ausentes",
+                required: ["title", "description", "category", "requesterId"],
+                received: body,
+            });
+            return;
+        }
+
+        const ticket = TicketService.postTicket({
+            title: body.title,
+            description: body.description,
+            category: body.category,
+            requesterId: body.requesterId,
+            assignedToId: body.assignedToId,
+        });
+
+        if (!ticket) {
+            return response.status(400).json({
+                message: "Solicitante invalido"
+            });
+        }
+
+        response.status(201).json(ticket);
     }
 }
 

@@ -1,6 +1,7 @@
 import { DatabaseManager } from "../repository";
 import { TicketCategory, TicketStatus, User, TicketComment } from "../types";
 import { Ticket } from "./Ticket";
+import { TicketFactory } from "./TicketFactory";
 
 
 export class TicketService {
@@ -102,4 +103,42 @@ export class TicketService {
         };
     }
 
+    static getUser(userId: string) {
+        const database = DatabaseManager.getInstance().readDatabase();
+        const user = database.users.find((item) => item.id === userId);
+
+        return user || null;
+    }
+
+    static postTicket(params: {
+        title: string;
+        description: string;
+        category: TicketCategory;
+        requesterId: string;
+        assignedToId?: string;
+    }) {
+        const database = DatabaseManager.getInstance().readDatabase();
+
+        const user = TicketService.getUser(params.requesterId);
+
+        if (!user) {
+            return null;
+        }
+
+        const now = new Date().toISOString();
+        const ticket = TicketFactory.create({
+            title: params.title,
+            description: params.description,
+            category: params.category,
+            requesterId: params.requesterId,
+            assignedToId: params.assignedToId,
+            status: "open",
+            createdAt: now,
+            updatedAt: now,
+        });
+
+        database.tickets.push(ticket);
+        DatabaseManager.getInstance().writeDatabase(database);
+        return ticket;
+    }
 }
