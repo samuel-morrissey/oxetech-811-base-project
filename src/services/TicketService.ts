@@ -141,4 +141,37 @@ export class TicketService {
         DatabaseManager.getInstance().writeDatabase(database);
         return ticket;
     }
+
+    static patchTicketStatus(ticketId: string, newStatus: TicketStatus, comment?: string, authorId?: string) {
+        const database = DatabaseManager.getInstance().readDatabase();
+        const ticket = database.tickets.find((item) => item.id === ticketId);
+
+        if (!ticket) {
+            return { success: false, message: "Ticket nao encontrado" };
+        }
+
+        if (!["open", "in_progress", "resolved", "closed"].includes(newStatus)) {
+            return { success: false, message: "Status invalido" };
+        }
+
+        if (newStatus === "closed" && !comment) {
+            return { success: false, message: "Informe um comentario para fechar o chamado" };
+        }
+
+        ticket.status = newStatus;
+        ticket.updatedAt = new Date().toISOString();
+
+        if (comment) {
+            database.comments.push({
+                id: DatabaseManager.generateId("comment"),
+                ticketId: ticket.id,
+                authorId: authorId || ticket.requesterId,
+                message: comment,
+                createdAt: new Date().toISOString(),
+            });
+        }
+
+        DatabaseManager.getInstance().writeDatabase(database);
+        return { success: true, ticket };
+    }
 }

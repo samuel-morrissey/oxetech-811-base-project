@@ -12,7 +12,9 @@ router.get("/tickets", TicketController.getAllTickets);
 router.get("/tickets/summary", TicketController.getSummary);
 router.get("/tickets/:id", TicketController.getTicketById);
 router.post("/tickets", TicketController.postTicket);
+router.patch("/tickets/:id/status", TicketController.patchTicketStatus);
 
+/*
 router.patch("/tickets/:id/status", (request, response) => {
   const database = DatabaseManager.getInstance().readDatabase();
   const ticket = database.tickets.find((item) => item.id === request.params.id);
@@ -49,6 +51,8 @@ router.patch("/tickets/:id/status", (request, response) => {
   DatabaseManager.getInstance().writeDatabase(database);
   response.json(ticket);
 });
+
+*/
 
 router.post("/tickets/:id/comments", (request, response) => {
   const database = DatabaseManager.getInstance().readDatabase();

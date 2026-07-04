@@ -62,6 +62,26 @@ export class TicketController {
 
         response.status(201).json(ticket);
     }
+
+    static patchTicketStatus(request: any, response: any) {
+        const ticketId = request.params.id;
+        const newStatus = request.body.status as TicketStatus;
+        const comment = request.body.comment;
+        const authorId = request.body.authorId;
+
+        const result = TicketService.patchTicketStatus(ticketId, newStatus, comment, authorId);
+
+        if (!result.success) {
+            if (result.message === "Ticket nao encontrado") {
+                return response.status(404).json({ message: result.message });
+            }
+
+            return response.status(400).json({ message: result.message });
+        }
+
+        response.json(result.ticket);
+    }
+
 }
 
 
