@@ -151,7 +151,7 @@ export class TicketService {
         }
 
         if (!["open", "in_progress", "resolved", "closed"].includes(newStatus)) {
-            return { success: false, message: "Status invalido" };
+            return { success: false, message: "Status invalido", allowed: ["open", "in_progress", "resolved", "closed"] };
         }
 
         if (newStatus === "closed" && !comment) {

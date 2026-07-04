@@ -76,6 +76,10 @@ export class TicketController {
                 return response.status(404).json({ message: result.message });
             }
 
+            if (result.allowed) {
+                return response.status(400).json({ message: result.message, allowed: result.allowed });
+            }
+
             return response.status(400).json({ message: result.message });
         }
 

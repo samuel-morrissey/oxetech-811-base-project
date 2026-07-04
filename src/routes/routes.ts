@@ -14,46 +14,6 @@ router.get("/tickets/:id", TicketController.getTicketById);
 router.post("/tickets", TicketController.postTicket);
 router.patch("/tickets/:id/status", TicketController.patchTicketStatus);
 
-/*
-router.patch("/tickets/:id/status", (request, response) => {
-  const database = DatabaseManager.getInstance().readDatabase();
-  const ticket = database.tickets.find((item) => item.id === request.params.id);
-  const newStatus = request.body.status as TicketStatus;
-
-  if (!ticket) {
-    response.status(404).json({ message: "Ticket nao encontrado" });
-    return;
-  }
-
-  if (!["open", "in_progress", "resolved", "closed"].includes(newStatus)) {
-    response.status(400).json({ message: "Status invalido", allowed: ["open", "in_progress", "resolved", "closed"] });
-    return;
-  }
-
-  if (newStatus === "closed" && !request.body.comment) {
-    response.status(400).json({ message: "Informe um comentario para fechar o chamado" });
-    return;
-  }
-
-  ticket.status = newStatus;
-  ticket.updatedAt = new Date().toISOString();
-
-  if (request.body.comment) {
-    database.comments.push({
-      id: DatabaseManager.generateId("comment"),
-      ticketId: ticket.id,
-      authorId: request.body.authorId || ticket.requesterId,
-      message: request.body.comment,
-      createdAt: new Date().toISOString(),
-    });
-  }
-
-  DatabaseManager.getInstance().writeDatabase(database);
-  response.json(ticket);
-});
-
-*/
-
 router.post("/tickets/:id/comments", (request, response) => {
   const database = DatabaseManager.getInstance().readDatabase();
   const ticket = database.tickets.find((item) => item.id === request.params.id);
