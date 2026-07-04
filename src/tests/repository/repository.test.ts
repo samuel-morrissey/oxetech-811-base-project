@@ -1,12 +1,7 @@
-import { describe, beforeAll, test, expect } from "@jest/globals";
+import { describe, test, expect } from "@jest/globals";
 import { DatabaseManager } from "../../repository";
 
 describe("Repository Tests", () => {
-    beforeAll(() => {
-        // Set the environment variable for the test database file
-        process.env.DATA_FILE = "src/tests/repository/db.test.json";
-    });
-
     test("should read the database correctly", () => {
         // arrange
 
