@@ -1,6 +1,7 @@
 import type { TicketStatus } from "../types";
 import { DatabaseManager, } from "../repository";
 import { TicketService } from "../services/TicketService";
+import { ERROR_MESSAGES } from "../constante.error";
 
 
 export class TicketController {
@@ -26,7 +27,7 @@ export class TicketController {
         const ticket = TicketService.getTicketById(request.params.id);
 
         if (!ticket) {
-            response.status(404).json({ "error": "Ticket nao encontrado", "id": request.params.id });
+            response.status(404).json({ "error": ERROR_MESSAGES.TICKET_NOT_FOUND, "id": request.params.id });
             return;
         }
 
@@ -46,7 +47,7 @@ export class TicketController {
 
         if (!ticket) {
             return response.status(400).json({
-                message: "Solicitante invalido"
+                message: ERROR_MESSAGES.INVALID_REQUEST
             });
         }
 
@@ -59,12 +60,10 @@ export class TicketController {
         const comment = request.body.comment;
         const authorId = request.body.authorId;
 
-        const errorTicketNotFound = "Ticket nao encontrado";
-
         const result = TicketService.patchTicketStatus(ticketId, newStatus, comment, authorId);
 
-        if (result.error === errorTicketNotFound) {
-            return response.status(404).json({ error: errorTicketNotFound });
+        if (result.error === ERROR_MESSAGES.TICKET_NOT_FOUND) {
+            return response.status(404).json({ error: ERROR_MESSAGES.TICKET_NOT_FOUND });
         }
 
         response.json(result.ticket);
@@ -78,13 +77,13 @@ export class TicketController {
         const result = TicketService.postTicketComment(ticketId, authorId, message);
 
         if (!result.success) {
-            if (result.error === "Ticket nao encontrado") {
-                response.status(404).json({ error: result.error });
+            if (result.error === ERROR_MESSAGES.TICKET_NOT_FOUND) {
+                response.status(404).json({ error: ERROR_MESSAGES.TICKET_NOT_FOUND });
                 return;
             }
 
-            if (result.error === "Comentario e autor sao obrigatorios") {
-                response.status(400).json({ error: result.error });
+            if (result.error === ERROR_MESSAGES.COMMENT_AND_AUTHOR_REQUIRED_FOR_CLOSING) {
+                response.status(400).json({ error: ERROR_MESSAGES.COMMENT_AND_AUTHOR_REQUIRED_FOR_CLOSING });
                 return;
             }
 

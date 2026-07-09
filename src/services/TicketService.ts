@@ -2,6 +2,7 @@ import { DatabaseManager } from "../repository";
 import { TicketCategory, TicketStatus, User, TicketComment } from "../types";
 import { Ticket } from "./Ticket";
 import { TicketFactory } from "./TicketFactory";
+import { ERROR_MESSAGES } from "../constante.error";
 
 
 export class TicketService {
@@ -147,7 +148,7 @@ export class TicketService {
         const ticket = database.tickets.find((item) => item.id === ticketId);
 
         if (!ticket) {
-            return { success: false, error: "Ticket nao encontrado" };
+            return { success: false, error: ERROR_MESSAGES.TICKET_NOT_FOUND };
         }
 
         ticket.status = newStatus;
@@ -172,11 +173,11 @@ export class TicketService {
         const ticket = database.tickets.find((item) => item.id === ticketId);
 
         if (!ticket) {
-            return { success: false, error: "Ticket nao encontrado" };
+            return { success: false, error: ERROR_MESSAGES.TICKET_NOT_FOUND };
         }
 
         if (!message || !authorId) {
-            return { success: false, error: "Comentario e autor sao obrigatorios" };
+            return { success: false, error: ERROR_MESSAGES.COMMENT_AND_AUTHOR_REQUIRED_FOR_CLOSING };
 
         }
 
