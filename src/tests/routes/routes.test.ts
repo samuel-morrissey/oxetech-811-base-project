@@ -167,7 +167,7 @@ describe("post /tickets Route", () => {
         const newTicket = {
             title: "Test Ticket",
             description: "This is a test ticket",
-            category: "technical",
+            category: "academico",
             requesterId: "user_ana",
         };
 
@@ -201,7 +201,7 @@ describe("post /tickets Route", () => {
         // Arrange
         const newTicket = {
             description: "This is a test ticket",
-            category: "technical",
+            category: "academico",
             requesterId: "user_ana",
         };
 
@@ -221,7 +221,7 @@ describe("post /tickets Route", () => {
         // Arrange
         const newTicket = {
             title: "Test Ticket",
-            category: "technical",
+            category: "academico",
             requesterId: "user_ana",
         };
 
@@ -262,7 +262,7 @@ describe("post /tickets Route", () => {
         const newTicket = {
             title: "Test Ticket",
             description: "This is a test ticket",
-            category: "technical",
+            category: "academico",
         };
 
         // Act
@@ -282,7 +282,7 @@ describe("post /tickets Route", () => {
         const newTicket = {
             title: "Test Ticket",
             description: "This is a test ticket",
-            category: "technical",
+            category: "academico",
             requesterId: "invalid_user_id",
         };
 

@@ -36,15 +36,6 @@ export class TicketController {
     static postTicket(request: any, response: any) {
         const body = request.body;
 
-        if (!body.title || !body.description || !body.category || !body.requesterId) {
-            response.status(400).json({
-                message: "Campos obrigatorios ausentes",
-                required: ["title", "description", "category", "requesterId"],
-                received: body,
-            });
-            return;
-        }
-
         const ticket = TicketService.postTicket({
             title: body.title,
             description: body.description,
@@ -68,18 +59,12 @@ export class TicketController {
         const comment = request.body.comment;
         const authorId = request.body.authorId;
 
+        const errorTicketNotFound = "Ticket nao encontrado";
+
         const result = TicketService.patchTicketStatus(ticketId, newStatus, comment, authorId);
 
-        if (!result.success) {
-            if (result.error === "Ticket nao encontrado") {
-                return response.status(404).json({ error: result.error });
-            }
-
-            if (result.allowed) {
-                return response.status(400).json({ error: result.error, allowed: result.allowed });
-            }
-
-            return response.status(400).json({ error: result.error });
+        if (result.error === errorTicketNotFound) {
+            return response.status(404).json({ error: errorTicketNotFound });
         }
 
         response.json(result.ticket);

@@ -150,14 +150,6 @@ export class TicketService {
             return { success: false, error: "Ticket nao encontrado" };
         }
 
-        if (!["open", "in_progress", "resolved", "closed"].includes(newStatus)) {
-            return { success: false, error: "Status invalido", allowed: ["open", "in_progress", "resolved", "closed"] };
-        }
-
-        if (newStatus === "closed" && !comment) {
-            return { success: false, error: "Informe um comentario para fechar o chamado" };
-        }
-
         ticket.status = newStatus;
         ticket.updatedAt = new Date().toISOString();
 
