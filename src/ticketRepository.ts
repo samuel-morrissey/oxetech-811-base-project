@@ -1,5 +1,5 @@
 import { readDatabase, writeDatabase } from "./database";
-import type { Ticket } from "./types";
+import type { Ticket, TicketComment } from "./types";
 
 export function findAllTickets(): Ticket[] {
   const database = readDatabase();
@@ -24,4 +24,21 @@ export function updateTicket(updatedTicket: Ticket): void {
     database.tickets[index] = updatedTicket;
     writeDatabase(database);
   }
+}
+
+export function updateTicketWithComment(updatedTicket: Ticket, comment?: TicketComment): void {
+  const database = readDatabase();
+  const index = database.tickets.findIndex((ticket) => ticket.id === updatedTicket.id);
+
+  if (index === -1) {
+    return;
+  }
+
+  database.tickets[index] = updatedTicket;
+
+  if (comment) {
+    database.comments.push(comment);
+  }
+
+  writeDatabase(database);
 }
