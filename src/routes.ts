@@ -1,7 +1,6 @@
 import { Router } from "express";
 import { AppError } from "./errors";
-import { VALID_STATUSES, type TicketStatus } from "./types";
-import { findAllUsers, findUserById } from "./userRepository";
+import { findAllUsers } from "./userRepository";
 import {
   addTicketComment,
   createTicket,
@@ -10,6 +9,11 @@ import {
   listTickets,
   updateTicketStatus,
 } from "./ticketService";
+import {
+  validateAddCommentInput,
+  validateCreateTicketInput,
+  validateUpdateStatusInput,
+} from "./validation";
 
 const router = Router();
 
@@ -51,27 +55,8 @@ router.get("/tickets/:id", (request, response, next) => {
 
 router.post("/tickets", (request, response, next) => {
   try {
-    const body = request.body;
-
-    if (!body.title || !body.description || !body.category || !body.requesterId) {
-      throw new AppError(400, "Campos obrigatorios ausentes", {
-        required: ["title", "description", "category", "requesterId"],
-      });
-    }
-
-    const user = findUserById(body.requesterId);
-    if (!user) {
-      throw new AppError(400, "Solicitante invalido");
-    }
-
-    const ticket = createTicket({
-      title: body.title,
-      description: body.description,
-      category: body.category,
-      requesterId: body.requesterId,
-      assignedToId: body.assignedToId,
-    });
-
+    const input = validateCreateTicketInput(request.body);
+    const ticket = createTicket(input);
     response.status(201).json(ticket);
   } catch (error) {
     next(error);
@@ -80,21 +65,8 @@ router.post("/tickets", (request, response, next) => {
 
 router.patch("/tickets/:id/status", (request, response, next) => {
   try {
-    const newStatus = request.body.status as TicketStatus;
-
-    if (!VALID_STATUSES.includes(newStatus)) {
-      throw new AppError(400, "Status invalido", { allowed: VALID_STATUSES });
-    }
-
-    if (newStatus === "closed" && !request.body.comment) {
-      throw new AppError(400, "Informe um comentario para fechar o chamado");
-    }
-
-    const ticket = updateTicketStatus(request.params.id, {
-      status: newStatus,
-      authorId: request.body.authorId,
-      comment: request.body.comment,
-    });
+    const input = validateUpdateStatusInput(request.body);
+    const ticket = updateTicketStatus(request.params.id, input);
 
     if (!ticket) {
       throw new AppError(404, "Ticket nao encontrado", { id: request.params.id });
@@ -108,16 +80,8 @@ router.patch("/tickets/:id/status", (request, response, next) => {
 
 router.post("/tickets/:id/comments", (request, response, next) => {
   try {
-    const body = request.body;
-
-    if (!body.message || !body.authorId) {
-      throw new AppError(400, "Comentario e autor sao obrigatorios");
-    }
-
-    const comment = addTicketComment(request.params.id, {
-      authorId: body.authorId,
-      message: body.message,
-    });
+    const input = validateAddCommentInput(request.body);
+    const comment = addTicketComment(request.params.id, input);
 
     if (!comment) {
       throw new AppError(404, "Ticket nao encontrado", { id: request.params.id });
