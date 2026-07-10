@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { AppError } from "./errors";
 import { VALID_STATUSES, type TicketStatus } from "./types";
 import { findAllUsers, findUserById } from "./userRepository";
 import {
@@ -34,92 +35,98 @@ router.get("/tickets/summary", (_request, response) => {
   response.json(getTicketsSummary());
 });
 
-router.get("/tickets/:id", (request, response) => {
-  const ticket = getTicketDetails(request.params.id);
+router.get("/tickets/:id", (request, response, next) => {
+  try {
+    const ticket = getTicketDetails(request.params.id);
 
-  if (!ticket) {
-    response.status(404).json({ error: "Ticket nao encontrado", id: request.params.id });
-    return;
+    if (!ticket) {
+      throw new AppError(404, "Ticket nao encontrado", { id: request.params.id });
+    }
+
+    response.json(ticket);
+  } catch (error) {
+    next(error);
   }
-
-  response.json(ticket);
 });
 
-router.post("/tickets", (request, response) => {
-  const body = request.body;
+router.post("/tickets", (request, response, next) => {
+  try {
+    const body = request.body;
 
-  if (!body.title || !body.description || !body.category || !body.requesterId) {
-    response.status(400).json({
-      message: "Campos obrigatorios ausentes",
-      required: ["title", "description", "category", "requesterId"],
-      received: body,
+    if (!body.title || !body.description || !body.category || !body.requesterId) {
+      throw new AppError(400, "Campos obrigatorios ausentes", {
+        required: ["title", "description", "category", "requesterId"],
+      });
+    }
+
+    const user = findUserById(body.requesterId);
+    if (!user) {
+      throw new AppError(400, "Solicitante invalido");
+    }
+
+    const ticket = createTicket({
+      title: body.title,
+      description: body.description,
+      category: body.category,
+      requesterId: body.requesterId,
+      assignedToId: body.assignedToId,
     });
-    return;
+
+    response.status(201).json(ticket);
+  } catch (error) {
+    next(error);
   }
-
-  const user = findUserById(body.requesterId);
-  if (!user) {
-    response.status(400).json({ message: "Solicitante invalido" });
-    return;
-  }
-
-  const ticket = createTicket({
-    title: body.title,
-    description: body.description,
-    category: body.category,
-    requesterId: body.requesterId,
-    assignedToId: body.assignedToId,
-  });
-
-  response.status(201).json(ticket);
 });
 
-router.patch("/tickets/:id/status", (request, response) => {
-  const newStatus = request.body.status as TicketStatus;
+router.patch("/tickets/:id/status", (request, response, next) => {
+  try {
+    const newStatus = request.body.status as TicketStatus;
 
-  if (!VALID_STATUSES.includes(newStatus)) {
-    response.status(400).json({ message: "Status invalido", allowed: VALID_STATUSES });
-    return;
+    if (!VALID_STATUSES.includes(newStatus)) {
+      throw new AppError(400, "Status invalido", { allowed: VALID_STATUSES });
+    }
+
+    if (newStatus === "closed" && !request.body.comment) {
+      throw new AppError(400, "Informe um comentario para fechar o chamado");
+    }
+
+    const ticket = updateTicketStatus(request.params.id, {
+      status: newStatus,
+      authorId: request.body.authorId,
+      comment: request.body.comment,
+    });
+
+    if (!ticket) {
+      throw new AppError(404, "Ticket nao encontrado", { id: request.params.id });
+    }
+
+    response.json(ticket);
+  } catch (error) {
+    next(error);
   }
-
-  if (newStatus === "closed" && !request.body.comment) {
-    response.status(400).json({ message: "Informe um comentario para fechar o chamado" });
-    return;
-  }
-
-  const ticket = updateTicketStatus(request.params.id, {
-    status: newStatus,
-    authorId: request.body.authorId,
-    comment: request.body.comment,
-  });
-
-  if (!ticket) {
-    response.status(404).json({ message: "Ticket nao encontrado" });
-    return;
-  }
-
-  response.json(ticket);
 });
 
-router.post("/tickets/:id/comments", (request, response) => {
-  const body = request.body;
+router.post("/tickets/:id/comments", (request, response, next) => {
+  try {
+    const body = request.body;
 
-  if (!body.message || !body.authorId) {
-    response.status(400).json({ error: "Comentario e autor sao obrigatorios" });
-    return;
+    if (!body.message || !body.authorId) {
+      throw new AppError(400, "Comentario e autor sao obrigatorios");
+    }
+
+    const comment = addTicketComment(request.params.id, {
+      authorId: body.authorId,
+      message: body.message,
+    });
+
+    if (!comment) {
+      throw new AppError(404, "Ticket nao encontrado", { id: request.params.id });
+    }
+
+    response.status(201).json(comment);
+  } catch (error) {
+    next(error);
   }
-
-  const comment = addTicketComment(request.params.id, {
-    authorId: body.authorId,
-    message: body.message,
-  });
-
-  if (!comment) {
-    response.status(404).json({ error: "Ticket nao encontrado" });
-    return;
-  }
-
-  response.status(201).json(comment);
 });
 
 export default router;
