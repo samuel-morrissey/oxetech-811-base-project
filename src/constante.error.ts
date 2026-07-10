@@ -5,4 +5,6 @@ export const ERROR_MESSAGES = {
     INVALID_STATUS: "Status invalido",
     COMMENT_REQUIRED_FOR_CLOSING: "Informe um comentario para fechar o chamado",
     COMMENT_AND_AUTHOR_REQUIRED_FOR_CLOSING: "Comentario e autor sao obrigatorios",
+    INVALID_CATEGORY: "Categoria invalida",
+    REQUIRED_FIELDS_MUST_BE_STRING: "Campos obrigatorios devem ser do tipo string",
 };
