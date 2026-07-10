@@ -31,13 +31,46 @@ npm run dev
 
 A API ficara disponivel em `http://localhost:3000/api`.
 
+## Como testar
+
+Execute os testes automatizados:
+
+```bash
+npm test
+```
+
+Os testes cobrem:
+
+- calculo de prioridade dos chamados;
+- validacao de entrada na criacao de chamado, atualizacao de status e comentarios.
+
+Para checagem de tipos:
+
+```bash
+npm run typecheck
+```
+
+Ha tambem um roteiro de validacao manual em [docs/VALIDACAO.md](docs/VALIDACAO.md).
+
 ## Scripts
 
 - `npm run dev`: executa a API em modo desenvolvimento.
 - `npm run seed`: recria o arquivo de dados inicial.
 - `npm run typecheck`: valida os tipos TypeScript.
 - `npm run build`: compila o projeto para `dist`.
-- `npm test`: placeholder inicial. Testes devem ser criados durante a evolucao.
+- `npm test`: executa os testes unitarios.
+
+## Organizacao do codigo
+
+Separacao atual das responsabilidades:
+
+- `src/routes.ts`: entrada HTTP.
+- `src/ticketService.ts`: regras de negocio dos chamados.
+- `src/validation.ts`: validacao de entrada.
+- `src/*Repository.ts` e `src/database.ts`: persistencia (infraestrutura).
+- `src/errors.ts` e `src/errorHandler.ts`: tratamento padronizado de erros.
+
+Diagnostico atualizado da codebase: [docs/DIAGNOSTICO.md](docs/DIAGNOSTICO.md).
 
 ## Endpoints principais
 
@@ -76,6 +109,8 @@ GET /api/tickets/ticket_001
 
 ### Criar chamado
 
+Categorias aceitas: `infra`, `sistemas`, `academico`.
+
 ```http
 POST /api/tickets
 Content-Type: application/json
@@ -89,6 +124,9 @@ Content-Type: application/json
 ```
 
 ### Atualizar status
+
+Status aceitos: `open`, `in_progress`, `resolved`, `closed`.
+Para fechar um chamado (`closed`), o campo `comment` e obrigatorio.
 
 ```http
 PATCH /api/tickets/ticket_001/status

@@ -4,6 +4,12 @@ export type TicketPriority = "low" | "medium" | "high" | "urgent";
 
 export type UserRole = "student" | "teacher" | "support";
 
+export const VALID_STATUSES: TicketStatus[] = ["open", "in_progress", "resolved", "closed"];
+
+export const VALID_CATEGORIES = ["infra", "sistemas", "academico"] as const;
+
+export type TicketCategory = (typeof VALID_CATEGORIES)[number];
+
 export interface User {
   id: string;
   name: string;
