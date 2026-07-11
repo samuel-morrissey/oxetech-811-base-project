@@ -7,7 +7,7 @@ on:
 
 jobs:
   build:
-    name: typecheck, test e build
+    name: lint, typecheck, test e build
     runs-on: ubuntu-latest
 
     steps:
@@ -22,6 +22,9 @@ jobs:
 
       - name: Instala dependencias
         run: npm ci
+
+      - name: Lint (ESLint)
+        run: npm run lint
 
       - name: Analise estatica (typecheck)
         run: npm run typecheck
