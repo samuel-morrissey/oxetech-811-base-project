@@ -9,6 +9,21 @@ O objetivo nao e reconstruir o sistema do zero. O objetivo e entender a aplicaca
 - Node.js 20 ou superior
 - npm
 
+## Tecnologias
+
+- TypeScript
+- Express
+- Jest
+- Swagger (OpenAPI)
+
+## Funcionalidades
+
+- Criar chamados
+- Listar chamados
+- Buscar chamado por ID
+- Alterar status
+- Adicionar comentários
+
 ## Como rodar
 
 Instale as dependencias:
@@ -31,98 +46,38 @@ npm run dev
 
 A API ficara disponivel em `http://localhost:3000/api`.
 
+## Documentação da API
+
+Após iniciar o servidor, acesse:
+
+```
+http://localhost:3000/api-docs
+```
+
+A API possui documentação interativa gerada com Swagger e permite:
+
+- visualizar todos os endpoints;
+- testar requisições diretamente pelo navegador;
+- consultar parâmetros, request bodies e respostas da API
+
+![Swagger](docs/swagger.png)
+
+## Arquitetura
+
+O projeto está organizado nas seguintes camadas:
+
+- **Routes:** definição das rotas da API.
+- **Controllers:** tratamento das requisições HTTP.
+- **Services:** implementação das regras de negócio.
+- **Middleware:** validação das entradas da API.
+- **Factory:** criação de objetos Ticket.
+- **DatabaseManager:** acesso ao banco de dados em JSON.
+
 ## Scripts
 
 - `npm run dev`: executa a API em modo desenvolvimento.
 - `npm run seed`: recria o arquivo de dados inicial.
 - `npm run typecheck`: valida os tipos TypeScript.
 - `npm run build`: compila o projeto para `dist`.
-- `npm test`: placeholder inicial. Testes devem ser criados durante a evolucao.
+- `npm test`: Executa os testes de integração implementados para validar os principais fluxos da API.
 
-## Endpoints principais
-
-### Healthcheck
-
-```http
-GET /api/health
-```
-
-### Listar usuarios
-
-```http
-GET /api/users
-```
-
-### Listar chamados
-
-```http
-GET /api/tickets
-GET /api/tickets?status=open
-GET /api/tickets?category=infra
-GET /api/tickets?search=login
-```
-
-### Resumo dos chamados
-
-```http
-GET /api/tickets/summary
-```
-
-### Detalhar chamado
-
-```http
-GET /api/tickets/ticket_001
-```
-
-### Criar chamado
-
-```http
-POST /api/tickets
-Content-Type: application/json
-
-{
-  "title": "Nao consigo enviar atividade",
-  "description": "O sistema apresenta erro ao anexar o arquivo da atividade.",
-  "category": "sistemas",
-  "requesterId": "user_ana"
-}
-```
-
-### Atualizar status
-
-```http
-PATCH /api/tickets/ticket_001/status
-Content-Type: application/json
-
-{
-  "status": "in_progress",
-  "authorId": "user_carla",
-  "comment": "Chamado em atendimento."
-}
-```
-
-### Adicionar comentario
-
-```http
-POST /api/tickets/ticket_001/comments
-Content-Type: application/json
-
-{
-  "authorId": "user_carla",
-  "message": "Solicitei mais informacoes ao usuario."
-}
-```
-
-## Jornada de refatoracao
-
-Trabalhe em Pull Requests pequenos e bem explicados.
-
-Em cada PR, registre:
-
-- quais problemas voce encontrou;
-- quais melhorias foram feitas;
-- quais conceitos do curso foram aplicados;
-- como voce verificou que o comportamento continua funcionando;
-- quais limitacoes continuam existindo.
-
-Consulte [docs/CHECKPOINTS.md](docs/CHECKPOINTS.md) para entender o escopo esperado de cada entrega.
