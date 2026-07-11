@@ -273,3 +273,7 @@ export class TicketService {
     return createdComment;
   }
 }
+
+export function calculatePriority(category: TicketCategory, description: string): TicketPriority {
+  return new PriorityCalculator().calculate(category, description);
+}

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { calculatePriority } from "../routes";
+import { calculatePriority } from "../services/TicketService";
 
 describe("calculatePriority", () => {
   it('retorna "urgent" para categoria infra', () => {
