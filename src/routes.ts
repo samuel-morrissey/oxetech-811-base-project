@@ -1,6 +1,13 @@
 import { Router } from "express";
 import type { Database, PublicUser, Ticket, TicketCategory, TicketPriority, TicketStatus, User } from "./types";
 import { readDatabase, writeDatabase } from "./database";
+import { AppError } from "./errors/AppError";
+import {
+  validateBody,
+  validateCreateTicket,
+  validateUpdateStatus,
+  validateCreateComment,
+} from "./middlewares/validation.middleware";
 
 const router = Router();
 
@@ -119,122 +126,139 @@ router.get("/tickets/summary", (_request, response) => {
   response.json(summary);
 });
 
-router.get("/tickets/:id", (request, response) => {
-  const database = readDatabase();
-  const ticket = database.tickets.find((item) => item.id === request.params.id);
+router.get("/tickets/:id", (request, response, next) => {
+  try {
+    const database = readDatabase();
+    const ticket = database.tickets.find((item) => item.id === request.params.id);
 
-  if (!ticket) {
-    response.status(404).json({ error: "Ticket não encontrado", id: request.params.id });
-    return;
+    if (!ticket) {
+      throw new AppError("Ticket não encontrado", 404);
+    }
+
+    response.json(enrichTicket(ticket, database));
+  } catch (error) {
+    next(error);
   }
-
-  response.json(enrichTicket(ticket, database));
 });
 
-router.post("/tickets", (request, response) => {
-  const database = readDatabase();
-  const body = request.body;
+router.post(
+  "/tickets",
+  validateBody(validateCreateTicket),
+  (request, response, next) => {
+    try {
+      const database = readDatabase();
+      const body = request.body;
 
-  if (!body.title || !body.description || !body.category || !body.requesterId) {
-    response.status(400).json({
-      error: "Campos obrigatórios ausentes",
-      required: ["title", "description", "category", "requesterId"],
-      received: body,
-    });
-    return;
+      const user = database.users.find((item) => item.id === body.requesterId);
+      if (!user) {
+        throw new AppError("Solicitante inválido", 400);
+      }
+
+      if (body.assignedToId) {
+        const assignedUser = database.users.find((item) => item.id === body.assignedToId);
+        if (!assignedUser) {
+          throw new AppError("Responsável inválido", 400);
+        }
+      }
+
+      const now = new Date().toISOString();
+      const ticket: Ticket = {
+        id: generateId("ticket"),
+        title: body.title,
+        description: body.description,
+        category: body.category as TicketCategory,
+        requesterId: body.requesterId,
+        assignedToId: body.assignedToId,
+        status: "open",
+        priority: calculatePriority(body.category as TicketCategory, body.description),
+        createdAt: now,
+        updatedAt: now,
+      };
+
+      database.tickets.push(ticket);
+      writeDatabase(database);
+
+      response.status(201).json(ticket);
+    } catch (error) {
+      next(error);
+    }
   }
+);
 
-  const user = database.users.find((item) => item.id === body.requesterId);
-  if (!user) {
-    response.status(400).json({ error: "Solicitante inválido" });
-    return;
+router.patch(
+  "/tickets/:id/status",
+  validateBody(validateUpdateStatus),
+  (request, response, next) => {
+    try {
+      const database = readDatabase();
+      const ticket = database.tickets.find((item) => item.id === request.params.id);
+      const newStatus = request.body.status as TicketStatus;
+
+      if (!ticket) {
+        throw new AppError("Ticket não encontrado", 404);
+      }
+
+      ticket.status = newStatus;
+      ticket.updatedAt = new Date().toISOString();
+
+      if (request.body.comment) {
+        const authorId = request.body.authorId || ticket.requesterId;
+        const author = database.users.find((user) => user.id === authorId);
+        if (!author) {
+          throw new AppError("Autor do comentário inválido", 400);
+        }
+        database.comments.push({
+          id: generateId("comment"),
+          ticketId: ticket.id,
+          authorId,
+          message: request.body.comment,
+          createdAt: new Date().toISOString(),
+        });
+      }
+
+      writeDatabase(database);
+      response.json(ticket);
+    } catch (error) {
+      next(error);
+    }
   }
+);
 
-  const now = new Date().toISOString();
-  const ticket: Ticket = {
-    id: generateId("ticket"),
-    title: body.title,
-    description: body.description,
-    category: body.category as TicketCategory,
-    requesterId: body.requesterId,
-    assignedToId: body.assignedToId,
-    status: "open",
-    priority: calculatePriority(body.category as TicketCategory, body.description),
-    createdAt: now,
-    updatedAt: now,
-  };
+router.post(
+  "/tickets/:id/comments",
+  validateBody(validateCreateComment),
+  (request, response, next) => {
+    try {
+      const database = readDatabase();
+      const ticket = database.tickets.find((item) => item.id === request.params.id);
+      const body = request.body;
 
-  database.tickets.push(ticket);
-  writeDatabase(database);
+      if (!ticket) {
+        throw new AppError("Ticket não encontrado", 404);
+      }
 
-  response.status(201).json(ticket);
-});
+      const author = database.users.find((user) => user.id === body.authorId);
+      if (!author) {
+        throw new AppError("Autor do comentário inválido", 400);
+      }
 
-router.patch("/tickets/:id/status", (request, response) => {
-  const database = readDatabase();
-  const ticket = database.tickets.find((item) => item.id === request.params.id);
-  const newStatus = request.body.status as TicketStatus;
+      const comment = {
+        id: generateId("comment"),
+        ticketId: ticket.id,
+        authorId: body.authorId,
+        message: body.message,
+        createdAt: new Date().toISOString(),
+      };
 
-  if (!ticket) {
-    response.status(404).json({ error: "Ticket não encontrado" });
-    return;
+      database.comments.push(comment);
+      ticket.updatedAt = new Date().toISOString();
+      writeDatabase(database);
+
+      response.status(201).json(comment);
+    } catch (error) {
+      next(error);
+    }
   }
-
-  if (!VALID_STATUSES.includes(newStatus)) {
-    response.status(400).json({ error: "Status inválido", allowed: VALID_STATUSES });
-    return;
-  }
-
-  if (newStatus === "closed" && !request.body.comment) {
-    response.status(400).json({ error: "Informe um comentário para fechar o chamado" });
-    return;
-  }
-
-  ticket.status = newStatus;
-  ticket.updatedAt = new Date().toISOString();
-
-  if (request.body.comment) {
-    database.comments.push({
-      id: generateId("comment"),
-      ticketId: ticket.id,
-      authorId: request.body.authorId || ticket.requesterId,
-      message: request.body.comment,
-      createdAt: new Date().toISOString(),
-    });
-  }
-
-  writeDatabase(database);
-  response.json(ticket);
-});
-
-router.post("/tickets/:id/comments", (request, response) => {
-  const database = readDatabase();
-  const ticket = database.tickets.find((item) => item.id === request.params.id);
-  const body = request.body;
-
-  if (!ticket) {
-    response.status(404).json({ error: "Ticket não encontrado" });
-    return;
-  }
-
-  if (!body.message || !body.authorId) {
-    response.status(400).json({ error: "Comentário e autor são obrigatórios" });
-    return;
-  }
-
-  const comment = {
-    id: generateId("comment"),
-    ticketId: ticket.id,
-    authorId: body.authorId,
-    message: body.message,
-    createdAt: new Date().toISOString(),
-  };
-
-  database.comments.push(comment);
-  ticket.updatedAt = new Date().toISOString();
-  writeDatabase(database);
-
-  response.status(201).json(comment);
-});
+);
 
 export default router;
