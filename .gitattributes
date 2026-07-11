@@ -1,0 +1,2 @@
+# Marcar o package-lock.json como gerado para que o GitHub oculte/colapse seu diff automaticamente nos Pull Requests
+package-lock.json linguist-generated

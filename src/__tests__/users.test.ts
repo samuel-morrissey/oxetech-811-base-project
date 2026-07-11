@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { toPublicUser } from "../routes";
+import { toPublicUser } from "../services/UserService";
 import type { User } from "../types";
 
 const userComSenha: User = {

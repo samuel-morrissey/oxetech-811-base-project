@@ -1,226 +1,43 @@
 import { Router } from "express";
-import type { Database, PublicUser, Ticket, TicketCategory, TicketPriority, TicketStatus, User } from "./types";
-import { readDatabase, writeDatabase } from "./database";
+import { UserRepository } from "./repositories/UserRepository";
+import { TicketRepository } from "./repositories/TicketRepository";
+import { UserService } from "./services/UserService";
+import { TicketService } from "./services/TicketService";
+import { UserController } from "./controllers/UserController";
+import { TicketController } from "./controllers/TicketController";
+import {
+  validateBody,
+  validateCreateTicket,
+  validateUpdateStatus,
+  validateCreateComment,
+} from "./middlewares/validation.middleware";
 
 const router = Router();
 
-const LONG_DESCRIPTION_THRESHOLD = 220;
-const VALID_STATUSES: TicketStatus[] = ["open", "in_progress", "resolved", "closed"];
+// Instanciação das dependências (Injeção de dependências manual)
+const userRepository = new UserRepository();
+const ticketRepository = new TicketRepository();
 
-function generateId(prefix: string) {
-  return `${prefix}_${Date.now()}_${Math.floor(Math.random() * 10000)}`;
-}
+const userService = new UserService(userRepository);
+const ticketService = new TicketService(ticketRepository, userRepository);
 
-export function toPublicUser(user: User): PublicUser {
-  const { password: _password, ...rest } = user;
-  return rest;
-}
+const userController = new UserController(userService);
+const ticketController = new TicketController(ticketService);
 
-function enrichTicket(ticket: Ticket, database: Database) {
-  const requester = database.users.find((user) => user.id === ticket.requesterId);
-  const assigned = database.users.find((user) => user.id === ticket.assignedToId);
-  const comments = database.comments
-    .filter((comment) => comment.ticketId === ticket.id)
-    .map((comment) => ({
-      ...comment,
-      author: database.users.find((user) => user.id === comment.authorId),
-    }));
-
-  return { ...ticket, requester, assigned, comments };
-}
-
-export function calculatePriority(category: TicketCategory, description: string): TicketPriority {
-  if (category === "infra" || description.toLowerCase().includes("urgente")) {
-    return "urgent";
-  }
-
-  if (category === "sistemas" || description.length > LONG_DESCRIPTION_THRESHOLD) {
-    return "high";
-  }
-
-  if (category === "academico") {
-    return "medium";
-  }
-
-  return "low";
-}
-
+// Healthcheck
 router.get("/health", (_request, response) => {
   response.json({ status: "ok", service: "oxetech-helpdesk" });
 });
 
-router.get("/users", (_request, response) => {
-  const database = readDatabase();
-  response.json(database.users.map(toPublicUser));
-});
+// Rotas de Usuário
+router.get("/users", userController.listUsers);
 
-router.get("/tickets", (request, response) => {
-  const database = readDatabase();
-  let tickets = database.tickets;
-
-  if (request.query.status) {
-    tickets = tickets.filter((ticket) => ticket.status === request.query.status);
-  }
-
-  if (request.query.category) {
-    tickets = tickets.filter((ticket) => ticket.category === request.query.category);
-  }
-
-  if (request.query.search) {
-    const search = String(request.query.search).toLowerCase();
-    tickets = tickets.filter(
-      (ticket) =>
-        ticket.title.toLowerCase().includes(search) ||
-        ticket.description.toLowerCase().includes(search) ||
-        ticket.category.toLowerCase().includes(search),
-    );
-  }
-
-  const result = tickets.map((ticket) => {
-    const { comments, ...enriched } = enrichTicket(ticket, database);
-    return { ...enriched, commentsCount: comments.length };
-  });
-
-  response.json(result);
-});
-
-router.get("/tickets/summary", (_request, response) => {
-  const database = readDatabase();
-  const summary = {
-    open: 0,
-    in_progress: 0,
-    resolved: 0,
-    closed: 0,
-    urgent: 0,
-  };
-
-  for (const ticket of database.tickets) {
-    if (ticket.status === "open") summary.open++;
-    if (ticket.status === "in_progress") summary.in_progress++;
-    if (ticket.status === "resolved") summary.resolved++;
-    if (ticket.status === "closed") summary.closed++;
-    if (ticket.priority === "urgent") summary.urgent++;
-  }
-
-  response.json(summary);
-});
-
-router.get("/tickets/:id", (request, response) => {
-  const database = readDatabase();
-  const ticket = database.tickets.find((item) => item.id === request.params.id);
-
-  if (!ticket) {
-    response.status(404).json({ error: "Ticket não encontrado", id: request.params.id });
-    return;
-  }
-
-  response.json(enrichTicket(ticket, database));
-});
-
-router.post("/tickets", (request, response) => {
-  const database = readDatabase();
-  const body = request.body;
-
-  if (!body.title || !body.description || !body.category || !body.requesterId) {
-    response.status(400).json({
-      error: "Campos obrigatórios ausentes",
-      required: ["title", "description", "category", "requesterId"],
-      received: body,
-    });
-    return;
-  }
-
-  const user = database.users.find((item) => item.id === body.requesterId);
-  if (!user) {
-    response.status(400).json({ error: "Solicitante inválido" });
-    return;
-  }
-
-  const now = new Date().toISOString();
-  const ticket: Ticket = {
-    id: generateId("ticket"),
-    title: body.title,
-    description: body.description,
-    category: body.category as TicketCategory,
-    requesterId: body.requesterId,
-    assignedToId: body.assignedToId,
-    status: "open",
-    priority: calculatePriority(body.category as TicketCategory, body.description),
-    createdAt: now,
-    updatedAt: now,
-  };
-
-  database.tickets.push(ticket);
-  writeDatabase(database);
-
-  response.status(201).json(ticket);
-});
-
-router.patch("/tickets/:id/status", (request, response) => {
-  const database = readDatabase();
-  const ticket = database.tickets.find((item) => item.id === request.params.id);
-  const newStatus = request.body.status as TicketStatus;
-
-  if (!ticket) {
-    response.status(404).json({ error: "Ticket não encontrado" });
-    return;
-  }
-
-  if (!VALID_STATUSES.includes(newStatus)) {
-    response.status(400).json({ error: "Status inválido", allowed: VALID_STATUSES });
-    return;
-  }
-
-  if (newStatus === "closed" && !request.body.comment) {
-    response.status(400).json({ error: "Informe um comentário para fechar o chamado" });
-    return;
-  }
-
-  ticket.status = newStatus;
-  ticket.updatedAt = new Date().toISOString();
-
-  if (request.body.comment) {
-    database.comments.push({
-      id: generateId("comment"),
-      ticketId: ticket.id,
-      authorId: request.body.authorId || ticket.requesterId,
-      message: request.body.comment,
-      createdAt: new Date().toISOString(),
-    });
-  }
-
-  writeDatabase(database);
-  response.json(ticket);
-});
-
-router.post("/tickets/:id/comments", (request, response) => {
-  const database = readDatabase();
-  const ticket = database.tickets.find((item) => item.id === request.params.id);
-  const body = request.body;
-
-  if (!ticket) {
-    response.status(404).json({ error: "Ticket não encontrado" });
-    return;
-  }
-
-  if (!body.message || !body.authorId) {
-    response.status(400).json({ error: "Comentário e autor são obrigatórios" });
-    return;
-  }
-
-  const comment = {
-    id: generateId("comment"),
-    ticketId: ticket.id,
-    authorId: body.authorId,
-    message: body.message,
-    createdAt: new Date().toISOString(),
-  };
-
-  database.comments.push(comment);
-  ticket.updatedAt = new Date().toISOString();
-  writeDatabase(database);
-
-  response.status(201).json(comment);
-});
+// Rotas de Ticket
+router.get("/tickets", ticketController.listTickets);
+router.get("/tickets/summary", ticketController.getTicketSummary);
+router.get("/tickets/:id", ticketController.getTicketDetail);
+router.post("/tickets", validateBody(validateCreateTicket), ticketController.createTicket);
+router.patch("/tickets/:id/status", validateBody(validateUpdateStatus), ticketController.updateTicketStatus);
+router.post("/tickets/:id/comments", validateBody(validateCreateComment), ticketController.addComment);
 
 export default router;
