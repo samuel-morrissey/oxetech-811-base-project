@@ -76,17 +76,10 @@ export class TicketController {
 
         const result = TicketService.postTicketComment(ticketId, authorId, message);
 
-        if (!result.success) {
-            if (result.error === ERROR_MESSAGES.TICKET_NOT_FOUND) {
-                response.status(404).json({ error: ERROR_MESSAGES.TICKET_NOT_FOUND });
-                return;
-            }
 
-            if (result.error === ERROR_MESSAGES.COMMENT_AND_AUTHOR_REQUIRED_FOR_CLOSING) {
-                response.status(400).json({ error: ERROR_MESSAGES.COMMENT_AND_AUTHOR_REQUIRED_FOR_CLOSING });
-                return;
-            }
-
+        if (result.error === ERROR_MESSAGES.TICKET_NOT_FOUND) {
+            response.status(404).json({ error: ERROR_MESSAGES.TICKET_NOT_FOUND });
+            return;
         }
 
         response.status(201).json(result.comment);

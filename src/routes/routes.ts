@@ -2,6 +2,7 @@ import { Router } from "express";
 import { TicketController } from "../controllers/TicketController";
 import { validateCreateTicket } from "../middleware/validateCreateTicket";
 import { patchTicketStatusMiddleware } from "../middleware/patchTicketStatus";
+import { validateCreateComment } from "../middleware/validateCreateComment";
 
 const router = Router();
 
@@ -37,7 +38,7 @@ router.get("/users", TicketController.getAllUsers);
  * @openapi
  * /api/tickets:
  *   get:
- *     summary: Get all tickets
+ *     summary: Get a list of tickets
  *     description: Returns a list of tickets.
  *     tags:
  *       - Tickets
@@ -229,7 +230,7 @@ router.patch("/tickets/:id/status", patchTicketStatusMiddleware, TicketControlle
  *       404:
  *         description: Ticket not found.
  */
-router.post("/tickets/:id/comments", TicketController.postTicketComment);
+router.post("/tickets/:id/comments", validateCreateComment, TicketController.postTicketComment);
 
 
 export default router;

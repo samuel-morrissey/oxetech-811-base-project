@@ -176,11 +176,6 @@ export class TicketService {
             return { success: false, error: ERROR_MESSAGES.TICKET_NOT_FOUND };
         }
 
-        if (!message || !authorId) {
-            return { success: false, error: ERROR_MESSAGES.COMMENT_AND_AUTHOR_REQUIRED_FOR_CLOSING };
-
-        }
-
         const comment = {
             id: DatabaseManager.generateId("comment"),
             ticketId: ticket.id,
