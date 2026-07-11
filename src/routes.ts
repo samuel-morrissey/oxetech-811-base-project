@@ -17,13 +17,14 @@ export function toPublicUser(user: User): PublicUser {
 }
 
 function enrichTicket(ticket: Ticket, database: Database) {
-  const requester = database.users.find((user) => user.id === ticket.requesterId);
-  const assigned = database.users.find((user) => user.id === ticket.assignedToId);
+  const usersMap = new Map(database.users.map((user) => [user.id, user]));
+  const requester = usersMap.get(ticket.requesterId);
+  const assigned = ticket.assignedToId ? usersMap.get(ticket.assignedToId) : undefined;
   const comments = database.comments
     .filter((comment) => comment.ticketId === ticket.id)
     .map((comment) => ({
       ...comment,
-      author: database.users.find((user) => user.id === comment.authorId),
+      author: comment.authorId ? usersMap.get(comment.authorId) : undefined,
     }));
 
   return { ...ticket, requester, assigned, comments };
@@ -76,9 +77,22 @@ router.get("/tickets", (request, response) => {
     );
   }
 
+  const usersMap = new Map(database.users.map((user) => [user.id, user]));
+  const commentCountsMap = new Map<string, number>();
+  for (const comment of database.comments) {
+    commentCountsMap.set(comment.ticketId, (commentCountsMap.get(comment.ticketId) || 0) + 1);
+  }
+
   const result = tickets.map((ticket) => {
-    const { comments, ...enriched } = enrichTicket(ticket, database);
-    return { ...enriched, commentsCount: comments.length };
+    const requester = usersMap.get(ticket.requesterId);
+    const assigned = ticket.assignedToId ? usersMap.get(ticket.assignedToId) : undefined;
+    const commentsCount = commentCountsMap.get(ticket.id) || 0;
+    return {
+      ...ticket,
+      requester,
+      assigned,
+      commentsCount,
+    };
   });
 
   response.json(result);
