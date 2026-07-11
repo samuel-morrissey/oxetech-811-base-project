@@ -2,7 +2,7 @@ import type { Request, Response, NextFunction } from "express";
 import { AppError } from "../errors/AppError";
 import type { TicketCategory, TicketStatus } from "../types";
 
-export function validateBody(validateFn: (body: any) => string | null) {
+export function validateBody(validateFn: (body: unknown) => string | null) {
   return (request: Request, _response: Response, next: NextFunction): void => {
     const errorMsg = validateFn(request.body);
     if (errorMsg) {
@@ -13,10 +13,10 @@ export function validateBody(validateFn: (body: any) => string | null) {
   };
 }
 
-export function validateCreateTicket(body: any): string | null {
-  if (!body) return "Corpo da requisição ausente";
-  
-  const { title, description, category, requesterId, assignedToId } = body;
+export function validateCreateTicket(body: unknown): string | null {
+  if (!body || typeof body !== "object") return "Corpo da requisição ausente";
+
+  const { title, description, category, requesterId, assignedToId } = body as Record<string, unknown>;
   
   if (!title || typeof title !== "string" || title.trim() === "") {
     return "O campo 'title' é obrigatório e deve ser uma string não vazia";
@@ -44,10 +44,10 @@ export function validateCreateTicket(body: any): string | null {
   return null;
 }
 
-export function validateUpdateStatus(body: any): string | null {
-  if (!body) return "Corpo da requisição ausente";
-  
-  const { status, comment, authorId } = body;
+export function validateUpdateStatus(body: unknown): string | null {
+  if (!body || typeof body !== "object") return "Corpo da requisição ausente";
+
+  const { status, comment, authorId } = body as Record<string, unknown>;
   
   if (!status || typeof status !== "string") {
     return "O campo 'status' é obrigatório";
@@ -73,10 +73,10 @@ export function validateUpdateStatus(body: any): string | null {
   return null;
 }
 
-export function validateCreateComment(body: any): string | null {
-  if (!body) return "Corpo da requisição ausente";
-  
-  const { message, authorId } = body;
+export function validateCreateComment(body: unknown): string | null {
+  if (!body || typeof body !== "object") return "Corpo da requisição ausente";
+
+  const { message, authorId } = body as Record<string, unknown>;
   
   if (!message || typeof message !== "string" || message.trim() === "") {
     return "Comentário é obrigatório e deve ser uma string não vazia";

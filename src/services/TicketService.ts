@@ -31,7 +31,7 @@ export class HighPriorityRule implements IPriorityRule {
 }
 
 export class MediumPriorityRule implements IPriorityRule {
-  evaluate(category: TicketCategory, description: string): TicketPriority | null {
+  evaluate(category: TicketCategory, _description: string): TicketPriority | null {
     if (category === "academico") {
       return "medium";
     }
