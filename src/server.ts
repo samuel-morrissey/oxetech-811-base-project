@@ -1,7 +1,7 @@
 import cors from "cors";
 import express from "express";
 import "dotenv/config";
-import router from "./routes";
+import router from "./controllers/helpdesk.controller";
 
 const app = express();
 const port = Number(process.env.PORT || 3000);
