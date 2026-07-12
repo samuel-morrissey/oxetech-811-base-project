@@ -55,7 +55,7 @@ I/O síncrono sem tratamento de erro de arquivo, sem lock para escrita concorren
 | # | Frente | Status |
 |---|--------|--------|
 | 1 | Diagnóstico atualizado | Em andamento (este documento) |
-| 2 | Separação em camadas (HTTP / regra de negócio / persistência), possivelmente em módulos com dependências claras | Pendente |
+| 2 | Separação em camadas (HTTP / regra de negócio / persistência), possivelmente em módulos com dependências claras | Concluído |
 | 3 | Melhoria de fluxo relevante — validar `assignedToId` e `authorId` contra usuários existentes | Pendente |
 | 4 | Validação de entrada (DTOs/schema) na borda HTTP e na regra de negócio | Pendente |
 | 5 | Tratamento de erros consistente (classes de erro + middleware central) | Pendente |
@@ -64,7 +64,24 @@ I/O síncrono sem tratamento de erro de arquivo, sem lock para escrita concorren
 
 ---
 
-Soluções e Decisões Técnicas
+## Soluções e Decisões Técnicas
+
+### 2. Separação em camadas (controller / service / repository)
+
+| | |
+|---|---|
+| **Problema** | `src/routes.ts` concentrava rotas Express, regra de negócio (`helpdeskFacade`) e persistência (`readDatabase`/`writeDatabase`) no mesmo arquivo — resolve os problemas 1 e 2 do diagnóstico. |
+| **Solução** | Divisão em três módulos por responsabilidade: `src/controllers/helpdesk.controller.ts` (rotas Express, apenas HTTP), `src/services/helpdesk.service.ts` (regra de negócio, `helpdeskService`) e `src/repositories/database.repository.ts` (`readDatabase`, `writeDatabase`, `generateId`). A regra de prioridade (Strategy da Avaliação 1) foi isolada em `src/services/ticket-priority.service.ts`. |
+| **Dependências entre módulos** | `controller → service → repository`, sentido único. O controller não conhece persistência; o service não conhece Express (sem `Request`/`Response`). |
+| **`routes.ts`** | Removido; `src/server.ts` passa a importar o router de `./controllers/helpdesk.controller`. |
+| **Comportamento** | Preservado integralmente — apenas reorganização física de código, validado com `npm run typecheck` (sem erros). |
+
+**Decisão registrada — `FacadeResult` mantido como está:**
+
+O tipo `FacadeResult` (agora em `helpdesk.service.ts`) ainda inclui `status: number`, ou seja, o service continua decidindo o código HTTP — o problema 3 do diagnóstico (regra de negócio carregando detalhe de HTTP) **não foi resolvido nesta etapa, de propósito**. A correção fica para o passo 5 (tratamento de erros consistente), quando o service passará a lançar erros de domínio e o controller decidirá o status HTTP. Fazer as duas mudanças juntas aumentaria o risco de quebra numa etapa que era só de reorganização estrutural.
+
+**Enrich como responsabilidade do service:** `enrichTicketListItem`/`enrichTicketDetail` foram tratadas como regra de negócio (decidem o shape da resposta) e ficaram no service, não no controller — consciente de que é uma escolha, não a única correta.
+
 ---
 
-*Documento em construção — seções de solução e decisões serão adicionadas conforme cada frente do plano for concluída.*
+*Documento em construção — próximas seções de solução e decisões serão adicionadas conforme cada frente do plano for concluída.*
