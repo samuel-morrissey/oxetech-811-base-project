@@ -1,85 +1,48 @@
-import { Router, type Response } from "express";
-import { helpdeskService, type FacadeResult } from "../services/helpdesk.service";
+import { Router } from "express";
+import { helpdeskService } from "../services/helpdesk.service";
 import {
   validateAddCommentBody,
   validateCreateTicketBody,
   validateListTicketsQuery,
   validateUpdateTicketStatusBody,
-  type ValidationFailure,
 } from "./helpdesk.validation";
 
 const router = Router();
-
-function sendFacadeResult<T>(response: Response, result: FacadeResult<T>) {
-  if (!result.ok) {
-    response.status(result.status).json(result.body);
-    return;
-  }
-
-  response.status(result.status).json(result.data);
-}
-
-function sendValidationError(response: Response, result: ValidationFailure) {
-  response.status(result.status).json(result.body);
-}
 
 router.get("/health", (_request, response) => {
   response.json({ status: "ok", service: "oxetech-helpdesk" });
 });
 
 router.get("/users", (_request, response) => {
-  sendFacadeResult(response, helpdeskService.listUsers());
+  response.status(200).json(helpdeskService.listUsers());
 });
 
 router.get("/tickets", (request, response) => {
-  const validation = validateListTicketsQuery(request.query);
-  if (!validation.ok) {
-    sendValidationError(response, validation);
-    return;
-  }
-
-  sendFacadeResult(response, helpdeskService.listTickets(validation.data));
+  const query = validateListTicketsQuery(request.query);
+  response.status(200).json(helpdeskService.listTickets(query));
 });
 
 router.get("/tickets/summary", (_request, response) => {
-  sendFacadeResult(response, helpdeskService.getTicketsSummary());
+  response.status(200).json(helpdeskService.getTicketsSummary());
 });
 
 router.get("/tickets/:id", (request, response) => {
-  sendFacadeResult(response, helpdeskService.getTicketById(request.params.id));
+  response.status(200).json(helpdeskService.getTicketById(request.params.id));
 });
 
 router.post("/tickets", (request, response) => {
-  const validation = validateCreateTicketBody(request.body);
-  if (!validation.ok) {
-    sendValidationError(response, validation);
-    return;
-  }
-
-  sendFacadeResult(response, helpdeskService.createTicket(validation.data));
+  const body = validateCreateTicketBody(request.body);
+  response.status(201).json(helpdeskService.createTicket(body));
 });
 
 router.patch("/tickets/:id/status", (request, response) => {
-  const validation = validateUpdateTicketStatusBody(request.body);
-  if (!validation.ok) {
-    sendValidationError(response, validation);
-    return;
-  }
-
-  sendFacadeResult(
-    response,
-    helpdeskService.updateTicketStatus(request.params.id, validation.data),
-  );
+  const body = validateUpdateTicketStatusBody(request.body);
+  response.status(200).json(helpdeskService.updateTicketStatus(request.params.id, body));
 });
 
 router.post("/tickets/:id/comments", (request, response) => {
-  const validation = validateAddCommentBody(request.body);
-  if (!validation.ok) {
-    sendValidationError(response, validation);
-    return;
-  }
-
-  sendFacadeResult(response, helpdeskService.addComment(request.params.id, validation.data));
+  const body = validateAddCommentBody(request.body);
+  response.status(201).json(helpdeskService.addComment(request.params.id, body));
 });
 
 export default router;
