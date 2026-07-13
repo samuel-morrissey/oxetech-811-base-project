@@ -58,7 +58,7 @@ I/O síncrono sem tratamento de erro de arquivo, sem lock para escrita concorren
 | 2 | Separação em camadas (HTTP / regra de negócio / persistência), possivelmente em módulos com dependências claras | Concluído |
 | 3 | Melhoria de fluxo relevante — validar `assignedToId` e `authorId` contra usuários existentes | Concluído |
 | 4 | Validação de entrada (DTOs/schema) na borda HTTP | Concluído |
-| 5 | Tratamento de erros consistente (classes de erro + middleware central) | Pendente |
+| 5 | Tratamento de erros consistente (classes de erro + middleware central) | Concluído |
 | 6 | Testes unitários e de integração (novo test runner a definir) | Pendente |
 | 7 | Correção de problemas básicos de segurança (exposição de `password`) | Pendente |
 
@@ -106,6 +106,20 @@ O tipo `FacadeResult` (agora em `helpdesk.service.ts`) ainda inclui `status: num
 | **Separação de responsabilidade** | Controller valida **formato** (tipo, obrigatoriedade, enum de status). Service continua validando **regra de negócio** que depende do banco (existência de `requesterId`/`assignedToId`/`authorId`, exigência de comentário ao fechar ticket) — por isso `hasRequiredTicketFields`, `requiredFieldsMissingResponse`, `isValidStatus`, `invalidStatusResponse`, `hasRequiredCommentFields`, `missingCommentFieldsResponse` foram removidas do service (ficaram redundantes). |
 | **Onde** | `src/controllers/helpdesk.validation.ts` (novo); `src/controllers/helpdesk.controller.ts` (chama a validação antes do service); `src/services/helpdesk.service.ts` (checagens de formato removidas, assinaturas dos métodos atualizadas para tipos já validados). |
 | **Verificação** | `npm run typecheck` sem erros; testes manuais: `title` numérico → 400 com mensagem de campo inválido; campo obrigatório ausente → 400; `status` inválido na query (`?status=foo`) → 400 (antes filtrava silenciosamente sem resultado); `status` inválido no PATCH → 400; fluxo válido de criação e listagem continuam funcionando. |
+
+---
+
+### 5. Tratamento de erros consistente (classes de erro + middleware central)
+
+| | |
+|---|---|
+| **Problema** | Fecha o problema 3 (regra de negócio decidindo status HTTP via `FacadeResult`) e o problema 5 (contrato de erro inconsistente, `{message}` vs `{error}`) do diagnóstico. |
+| **Solução** | Novo módulo `src/errors/app-error.ts`: `AppError` (base, com `status` e `details` opcionais), `NotFoundError` (404) e `BadRequestError` (400). `helpdesk.service.ts` e `helpdesk.validation.ts` deixaram de retornar `FacadeResult`/`ValidationResult` e passaram a **lançar** essas exceções; os métodos agora retornam o dado de sucesso diretamente (`Ticket`, `TicketComment`, `User[]`, etc.). |
+| **Controller** | Ficou ainda mais fino: cada rota só valida, chama o service e define o status de sucesso (`response.status(200\|201).json(dado)`); não decide mais nada sobre erro. Erros lançados de forma síncrona são encaminhados automaticamente pelo Express para o middleware de erro (não precisou de `try/catch` manual nem de wrapper `asyncHandler`, já que toda a cadeia é síncrona). |
+| **Middleware central** | Adicionado em `src/server.ts`, depois das rotas e do handler de 404: se o erro for `AppError`, responde `{ error: mensagem, ...detalhes }` com o status certo; qualquer outro erro cai num 500 genérico (`console.error` + `{ error: "Erro interno do servidor" }`). |
+| **Contrato de erro unificado** | Todo erro da API (validação de formato, regra de negócio, 404 de rota inexistente, 500 genérico) responde no mesmo formato `{ error: string, ...detalhes opcionais }` — acaba a mistura `message`/`error` que existia desde a Avaliação 1. |
+| **Onde** | `src/errors/app-error.ts` (novo); `src/services/helpdesk.service.ts` e `src/controllers/helpdesk.validation.ts` (retornam dado direto, lançam erro); `src/controllers/helpdesk.controller.ts` (simplificado); `src/server.ts` (middleware de erro + 404 padronizado). |
+| **Verificação** | `npm run typecheck` sem erros. Testes manuais: ticket inexistente → 404 `{error, id}`; solicitante inválido → 400 `{error}`; campo obrigatório ausente → 400 `{error, required}`; fechar ticket sem comentário → 400; rota inexistente → 404 `{error}`; fluxo válido de criação (201) e listagem (200) continuam funcionando normalmente. |
 
 ---
 
