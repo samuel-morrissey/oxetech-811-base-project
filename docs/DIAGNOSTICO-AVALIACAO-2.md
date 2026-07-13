@@ -56,7 +56,7 @@ I/O síncrono sem tratamento de erro de arquivo, sem lock para escrita concorren
 |---|--------|--------|
 | 1 | Diagnóstico atualizado | Em andamento (este documento) |
 | 2 | Separação em camadas (HTTP / regra de negócio / persistência), possivelmente em módulos com dependências claras | Concluído |
-| 3 | Melhoria de fluxo relevante — validar `assignedToId` e `authorId` contra usuários existentes | Pendente |
+| 3 | Melhoria de fluxo relevante — validar `assignedToId` e `authorId` contra usuários existentes | Concluído |
 | 4 | Validação de entrada (DTOs/schema) na borda HTTP e na regra de negócio | Pendente |
 | 5 | Tratamento de erros consistente (classes de erro + middleware central) | Pendente |
 | 6 | Testes unitários e de integração (novo test runner a definir) | Pendente |
@@ -81,6 +81,18 @@ I/O síncrono sem tratamento de erro de arquivo, sem lock para escrita concorren
 O tipo `FacadeResult` (agora em `helpdesk.service.ts`) ainda inclui `status: number`, ou seja, o service continua decidindo o código HTTP — o problema 3 do diagnóstico (regra de negócio carregando detalhe de HTTP) **não foi resolvido nesta etapa, de propósito**. A correção fica para o passo 5 (tratamento de erros consistente), quando o service passará a lançar erros de domínio e o controller decidirá o status HTTP. Fazer as duas mudanças juntas aumentaria o risco de quebra numa etapa que era só de reorganização estrutural.
 
 **Enrich como responsabilidade do service:** `enrichTicketListItem`/`enrichTicketDetail` foram tratadas como regra de negócio (decidem o shape da resposta) e ficaram no service, não no controller — consciente de que é uma escolha, não a única correta.
+
+---
+
+### 3. Melhoria de fluxo — validar `assignedToId` e `authorId`
+
+| | |
+|---|---|
+| **Problema** | Parte do problema 4 do diagnóstico: `createTicket` validava `requesterId`, mas `assignedToId` era aceito sem checagem; `addComment` e `updateTicketStatus` aceitavam `authorId` sem verificar se o usuário existia. Um ticket podia ficar atribuído, ou um comentário assinado, por um `id` inexistente. |
+| **Solução** | Generalizado `findRequesterOrFail` para `findUserOrFail(users, id, notFoundMessage)`, reaproveitado nos três pontos: `createTicket` (valida `assignedToId` quando informado — campo opcional, só valida se vier), `addComment` (valida `authorId`, já obrigatório) e `updateTicketStatus` (valida `authorId` quando informado, mesmo comportamento opcional que já existia). |
+| **Mensagens** | `"Atendente invalido"` (assignedToId) e `"Autor invalido"` (authorId), seguindo o mesmo padrão de `"Solicitante invalido"` já usado. |
+| **Onde** | `src/services/helpdesk.service.ts` — `findUserOrFail`, `createTicket`, `updateTicketStatus`, `addComment`. |
+| **Verificação** | `npm run typecheck` sem erros; teste manual com `POST /tickets` (assignedToId inválido → 400 `Atendente invalido`) e `POST /tickets/:id/comments` (authorId inválido → 400 `Autor invalido`), além do fluxo válido continuando a funcionar. |
 
 ---
 
