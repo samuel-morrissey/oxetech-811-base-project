@@ -1,23 +1,10 @@
 import { Router } from "express";
-import fs from "node:fs";
-import path from "node:path";
-import type { Database, Ticket, TicketStatus } from "../types";
+import type { Ticket, TicketStatus } from "../types";
 import { generateId, calculatePriority } from "../utils/utils";
+import { readDatabase, writeDatabase } from "../repository/ticket-repository";
 import { getTicketsSummary, updateTicketStatus, enrichTickets, filterTickets} from "../service/ticket-service";
 
 const router = Router();
-const dataFile = process.env.DATA_FILE || "data/db.json";
-const databasePath = path.resolve(process.cwd(), dataFile);
-
-function readDatabase(): Database {
-  const content = fs.readFileSync(databasePath, "utf-8");
-  return JSON.parse(content) as Database;
-}
-
-function writeDatabase(database: Database) {
-  fs.writeFileSync(databasePath, JSON.stringify(database, null, 2));
-}
-
 
 router.get("/tickets", (request, response) => {
   const database = readDatabase();
