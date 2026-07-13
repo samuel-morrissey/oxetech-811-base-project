@@ -376,6 +376,11 @@ export const helpdeskService = {
       return missingCommentFieldsResponse();
     }
 
+    const authorError = findUserOrFail(database.users, body.authorId, "Autor invalido");
+    if (authorError) {
+      return authorError;
+    }
+
     const comment = buildComment(ticket.id, body.message as string, body.authorId as string);
 
     database.comments.push(comment);
