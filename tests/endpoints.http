@@ -1,0 +1,115 @@
+@baseUrl = http://localhost:3000/api
+
+### Teste de Endpoints - Helpdesk API
+### Roteiro de validacao manual (tambem executado via npm test)
+
+### 1. GET /health - Health Check
+GET {{baseUrl}}/health
+
+### 2. GET /users - Listar todos os usuarios
+GET {{baseUrl}}/users
+
+### 3. GET /tickets/summary - Resumo de tickets
+GET {{baseUrl}}/tickets/summary
+
+### 4. GET /tickets - Listar tickets
+GET {{baseUrl}}/tickets
+
+### 4.1 GET /tickets - Filtro por status
+GET {{baseUrl}}/tickets?status=open
+
+### 4.2 GET /tickets - Filtro por categoria
+GET {{baseUrl}}/tickets?category=infra
+
+### 4.3 GET /tickets - Busca por texto
+GET {{baseUrl}}/tickets?search=urgente
+
+### 5. POST /tickets - Criar ticket
+POST {{baseUrl}}/tickets
+Content-Type: application/json
+
+{
+  "title": "Servidor down",
+  "description": "O servidor de producao esta offline e urgente",
+  "category": "infra",
+  "requesterId": "user_ana"
+}
+
+### 6. GET /tickets/:id - Obter detalhes do ticket
+GET {{baseUrl}}/tickets/ticket_001
+
+### 7. PATCH /tickets/:id/status - Atualizar status do ticket
+PATCH {{baseUrl}}/tickets/ticket_002/status
+Content-Type: application/json
+
+{
+  "status": "in_progress",
+  "comment": "Comecando a investigar o problema",
+  "authorId": "user_carla"
+}
+
+### 8. PATCH /tickets/:id/status - Fechar ticket com comentario obrigatorio
+PATCH {{baseUrl}}/tickets/ticket_002/status
+Content-Type: application/json
+
+{
+  "status": "closed",
+  "comment": "Problema resolvido. Servidor reiniciado.",
+  "authorId": "user_carla"
+}
+
+### 9. POST /tickets/:id/comments - Adicionar comentario
+POST {{baseUrl}}/tickets/ticket_001/comments
+Content-Type: application/json
+
+{
+  "message": "Adicionando mais detalhes sobre a solucao",
+  "authorId": "user_bruno"
+}
+
+### 10. Testes de Erro - GET /tickets/:id com ID invalido
+GET {{baseUrl}}/tickets/invalid_id
+
+### 11. Testes de Erro - POST /tickets sem campos obrigatorios
+POST {{baseUrl}}/tickets
+Content-Type: application/json
+
+{
+  "title": "Ticket incompleto"
+}
+
+### 12. Testes de Erro - POST /tickets com solicitante invalido
+POST {{baseUrl}}/tickets
+Content-Type: application/json
+
+{
+  "title": "Ticket teste",
+  "description": "Descricao teste",
+  "category": "sistemas",
+  "requesterId": "user_inexistente"
+}
+
+### 13. Testes de Erro - PATCH /tickets/:id/status com status invalido
+PATCH {{baseUrl}}/tickets/ticket_001/status
+Content-Type: application/json
+
+{
+  "status": "invalid_status",
+  "comment": "teste"
+}
+
+### 14. Testes de Erro - PATCH /tickets/:id/status fechar sem comentario
+PATCH {{baseUrl}}/tickets/ticket_001/status
+Content-Type: application/json
+
+{
+  "status": "closed"
+}
+
+### 15. Testes de Erro - POST /tickets/:id/comments sem campos obrigatorios
+POST {{baseUrl}}/tickets/ticket_001/comments
+Content-Type: application/json
+
+{
+  "message": "Apenas mensagem sem autor"
+}

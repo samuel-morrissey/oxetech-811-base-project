@@ -12,7 +12,8 @@
     "build": "tsc",
     "typecheck": "tsc --noEmit",
     "seed": "tsx src/seed.ts",
-    "test": "echo \"Nenhum teste automatizado configurado ainda. Crie testes durante a refatoracao.\" && exit 0"
+    "test": "vitest run",
+    "test:manual": "npx --yes httpyac send tests/endpoints.http --all"
   },
   "dependencies": {
     "cors": "^2.8.6",
@@ -23,7 +24,10 @@
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
     "@types/node": "^25.9.1",
+    "@types/supertest": "^7.2.0",
+    "supertest": "^7.2.2",
     "tsx": "^4.22.3",
-    "typescript": "^6.0.3"
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.10"
   }
 }

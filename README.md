@@ -37,7 +37,8 @@ A API ficara disponivel em `http://localhost:3000/api`.
 - `npm run seed`: recria o arquivo de dados inicial.
 - `npm run typecheck`: valida os tipos TypeScript.
 - `npm run build`: compila o projeto para `dist`.
-- `npm test`: placeholder inicial. Testes devem ser criados durante a evolucao.
+- `npm test`: executa a suite de testes automatizados (Vitest + supertest) — unitarios (regra de prioridade, validacao de entrada) e de integracao (endpoints principais da API).
+- `npm run test:manual`: roteiro manual de verificacao via `httpyac` (`tests/endpoints.http`), util para explorar a API manualmente.
 
 ## Endpoints principais
 
