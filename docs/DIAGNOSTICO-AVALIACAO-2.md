@@ -57,7 +57,7 @@ I/O síncrono sem tratamento de erro de arquivo, sem lock para escrita concorren
 | 1 | Diagnóstico atualizado | Em andamento (este documento) |
 | 2 | Separação em camadas (HTTP / regra de negócio / persistência), possivelmente em módulos com dependências claras | Concluído |
 | 3 | Melhoria de fluxo relevante — validar `assignedToId` e `authorId` contra usuários existentes | Concluído |
-| 4 | Validação de entrada (DTOs/schema) na borda HTTP e na regra de negócio | Pendente |
+| 4 | Validação de entrada (DTOs/schema) na borda HTTP | Concluído |
 | 5 | Tratamento de erros consistente (classes de erro + middleware central) | Pendente |
 | 6 | Testes unitários e de integração (novo test runner a definir) | Pendente |
 | 7 | Correção de problemas básicos de segurança (exposição de `password`) | Pendente |
@@ -93,6 +93,19 @@ O tipo `FacadeResult` (agora em `helpdesk.service.ts`) ainda inclui `status: num
 | **Mensagens** | `"Atendente invalido"` (assignedToId) e `"Autor invalido"` (authorId), seguindo o mesmo padrão de `"Solicitante invalido"` já usado. |
 | **Onde** | `src/services/helpdesk.service.ts` — `findUserOrFail`, `createTicket`, `updateTicketStatus`, `addComment`. |
 | **Verificação** | `npm run typecheck` sem erros; teste manual com `POST /tickets` (assignedToId inválido → 400 `Atendente invalido`) e `POST /tickets/:id/comments` (authorId inválido → 400 `Autor invalido`), além do fluxo válido continuando a funcionar. |
+
+---
+
+### 4. Validação de entrada (DTOs) na borda HTTP
+
+| | |
+|---|---|
+| **Problema** | Resto do problema 4 do diagnóstico: checagens no service eram só `Boolean(...)` (campo existe?), sem validar tipo/formato. `description` não-string quebrava `calculatePriority` com 500 não tratado; `status` na query de `listTickets` não era validado contra os valores permitidos. |
+| **Decisão** | Sem biblioteca de validação (Zod avaliado e descartado por overkill para o escopo) — validação manual com type guards. Validação concentrada **só na borda HTTP** (controller), já que o service só é chamado pelo controller hoje; validar nos dois lugares seria checagem duplicada sem ganho. |
+| **Solução** | Novo módulo `src/controllers/helpdesk.validation.ts` com uma função de validação por rota (`validateCreateTicketBody`, `validateUpdateTicketStatusBody`, `validateAddCommentBody`, `validateListTicketsQuery`), cada uma retornando `ValidationResult<T>` (dado tipado ou erro 400 já formatado). O controller valida antes de chamar o service; o service passou a receber apenas dados já com formato garantido. |
+| **Separação de responsabilidade** | Controller valida **formato** (tipo, obrigatoriedade, enum de status). Service continua validando **regra de negócio** que depende do banco (existência de `requesterId`/`assignedToId`/`authorId`, exigência de comentário ao fechar ticket) — por isso `hasRequiredTicketFields`, `requiredFieldsMissingResponse`, `isValidStatus`, `invalidStatusResponse`, `hasRequiredCommentFields`, `missingCommentFieldsResponse` foram removidas do service (ficaram redundantes). |
+| **Onde** | `src/controllers/helpdesk.validation.ts` (novo); `src/controllers/helpdesk.controller.ts` (chama a validação antes do service); `src/services/helpdesk.service.ts` (checagens de formato removidas, assinaturas dos métodos atualizadas para tipos já validados). |
+| **Verificação** | `npm run typecheck` sem erros; testes manuais: `title` numérico → 400 com mensagem de campo inválido; campo obrigatório ausente → 400; `status` inválido na query (`?status=foo`) → 400 (antes filtrava silenciosamente sem resultado); `status` inválido no PATCH → 400; fluxo válido de criação e listagem continuam funcionando. |
 
 ---
 
