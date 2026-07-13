@@ -63,10 +63,14 @@ function requiredFieldsMissingResponse(body: {
   return { ok: false, status: 400, body: { message: "Campos obrigatorios ausentes", required: ["title", "description", "category", "requesterId"], received: body } };
 }
 
-function findRequesterOrFail(users: User[], id?: string): FacadeResult<never> | null {
-  const requester = users.find((user) => user.id === id);
-  if (!requester) {
-    return { ok: false, status: 400, body: { message: "Solicitante invalido" } };
+function findUserOrFail(
+  users: User[],
+  id: string | undefined,
+  notFoundMessage: string,
+): FacadeResult<never> | null {
+  const user = users.find((user) => user.id === id);
+  if (!user) {
+    return { ok: false, status: 400, body: { message: notFoundMessage } };
   }
   return null;
 }
