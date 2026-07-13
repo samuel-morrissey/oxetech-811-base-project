@@ -43,26 +43,6 @@ function enrichTicketDetail(database: Database, ticket: Ticket) {
   return { ...ticket, requester, assigned, comments };
 }
 
-function hasRequiredTicketFields(body: {
-  title: string;
-  description: string;
-  category: string;
-  requesterId: string;
-  assignedToId?: string;
-}): boolean {
-  return Boolean(body.title && body.description && body.category && body.requesterId);
-}
-
-function requiredFieldsMissingResponse(body: {
-  title?: string;
-  description?: string;
-  category?: string;
-  requesterId?: string;
-  assignedToId?: string;
-}): FacadeResult<Ticket> {
-  return { ok: false, status: 400, body: { message: "Campos obrigatorios ausentes", required: ["title", "description", "category", "requesterId"], received: body } };
-}
-
 function findUserOrFail(
   users: User[],
   id: string | undefined,
@@ -173,21 +153,6 @@ function ticketNotFoundResponse(id: string): FacadeResult<TicketDetail> {
   };
 }
 
-function isValidStatus(status: unknown): status is TicketStatus {
-  return ["open", "in_progress", "resolved", "closed"].includes(String(status));
-}
-
-function invalidStatusResponse(): FacadeResult<Ticket> {
-  return {
-    ok: false,
-    status: 400,
-    body: {
-      message: "Status invalido",
-      allowed: ["open", "in_progress", "resolved", "closed"],
-    },
-  };
-}
-
 function requiresCommentForClosed(status: TicketStatus, comment?: string): boolean {
   return status === "closed" && !comment;
 }
@@ -222,21 +187,6 @@ function addCommentIfProvided(
   }
 }
 
-function hasRequiredCommentFields(body: {
-  message?: string;
-  authorId?: string;
-}): boolean {
-  return Boolean(body.message && body.authorId);
-}
-
-function missingCommentFieldsResponse(): FacadeResult<TicketComment> {
-  return {
-    ok: false,
-    status: 400,
-    body: { error: "Comentario e autor sao obrigatorios" },
-  };
-}
-
 function buildComment(ticketId: string, message: string, authorId: string): TicketComment {
   return {
     id: generateId("comment"),
@@ -254,15 +204,15 @@ export const helpdeskService = {
   },
 
   listTickets(query: {
-    status?: unknown;
-    category?: unknown;
-    search?: unknown;
+    status?: TicketStatus;
+    category?: string;
+    search?: string;
   }): FacadeResult<TicketListItem[]> {
     const database = readDatabase();
     let filteredTickets = filterTicketsByStatusAndCategory(database.tickets, query);
 
     if (query.search) {
-      filteredTickets = filterTicketsBySearch(filteredTickets, String(query.search));
+      filteredTickets = filterTicketsBySearch(filteredTickets, query.search);
     }
 
     const ticketList = buildEnrichedTicketList(database, filteredTickets);
@@ -304,10 +254,6 @@ export const helpdeskService = {
   }): FacadeResult<Ticket> {
     const database = readDatabase();
 
-    if (!hasRequiredTicketFields(body)) {
-      return requiredFieldsMissingResponse(body);
-    }
-
     const requesterError = findUserOrFail(database.users, body.requesterId, "Solicitante invalido");
     if (requesterError) {
       return requesterError;
@@ -330,17 +276,13 @@ export const helpdeskService = {
 
   updateTicketStatus(
     id: string,
-    body: { status?: TicketStatus; comment?: string; authorId?: string },
+    body: { status: TicketStatus; comment?: string; authorId?: string },
   ): FacadeResult<Ticket> {
     const database = readDatabase();
     const ticket = findTicketById(database.tickets, id);
 
     if (!ticket) {
       return { ok: false, status: 404, body: { message: "Ticket nao encontrado" } };
-    }
-
-    if (!isValidStatus(body.status)) {
-      return invalidStatusResponse();
     }
 
     if (requiresCommentForClosed(body.status, body.comment)) {
@@ -363,7 +305,7 @@ export const helpdeskService = {
 
   addComment(
     id: string,
-    body: { message?: string; authorId?: string },
+    body: { message: string; authorId: string },
   ): FacadeResult<TicketComment> {
     const database = readDatabase();
     const ticket = findTicketById(database.tickets, id);
@@ -372,16 +314,12 @@ export const helpdeskService = {
       return { ok: false, status: 404, body: { error: "Ticket nao encontrado" } };
     }
 
-    if (!hasRequiredCommentFields(body)) {
-      return missingCommentFieldsResponse();
-    }
-
     const authorError = findUserOrFail(database.users, body.authorId, "Autor invalido");
     if (authorError) {
       return authorError;
     }
 
-    const comment = buildComment(ticket.id, body.message as string, body.authorId as string);
+    const comment = buildComment(ticket.id, body.message, body.authorId);
 
     database.comments.push(comment);
     ticket.updatedAt = new Date().toISOString();
