@@ -2,7 +2,7 @@ import { Router } from "express";
 import fs from "node:fs";
 import path from "node:path";
 import type { Database, Ticket, TicketStatus } from "../types";
-import { calculatePriority, generateId } from "../utils/utils";
+import { calculatePriority, generateId, getTicketsSummary, updateTicketStatus } from "../service/ticket-service";
 
 const router = Router();
 const dataFile = process.env.DATA_FILE || "data/db.json";
@@ -62,21 +62,6 @@ router.get("/tickets", (request, response) => {
 
   response.json(result);
 });
-
-
-function getTicketsSummary(tickets: Ticket[]) {
-  return tickets.reduce(
-    (summary, ticket) => {
-      if (ticket.status === "open") summary.open++;
-      if (ticket.status === "in_progress") summary.in_progress++;
-      if (ticket.status === "resolved") summary.resolved++;
-      if (ticket.status === "closed") summary.closed++;
-      if (ticket.priority === "urgent") summary.urgent++;
-      return summary;
-    },
-    { open: 0, in_progress: 0, resolved: 0, closed: 0, urgent: 0 }
-  );
-}
 
 router.get("/tickets/summary", (_request, response) => {
   const database = readDatabase();
@@ -145,38 +130,7 @@ router.post("/tickets", (request, response) => {
   response.status(201).json(ticket);
 });
 
-function updateTicketStatus(
 
-  database: Database,
-  ticketId: string,
-  newStatus: TicketStatus,
-  authorId?: string,
-  comment?: string
-  ): Ticket {
-  const ticket = database.tickets.find(item => item.id === ticketId);
-  if (!ticket) throw new Error("NOT_FOUND");
-
-  const allowedStatuses: TicketStatus[] = ["open", "in_progress", "resolved", "closed"];
-  if (!allowedStatuses.includes(newStatus)) throw new Error("INVALID_STATUS");
-
-  if (newStatus === "closed" && !comment) throw new Error("COMMENT_REQUIRED");
-
-  ticket.status = newStatus;
-  ticket.updatedAt = new Date().toISOString();
-
-  if (comment) {
-  database.comments.push({
-    id: generateId("comment"),
-    ticketId: ticket.id,
-    authorId: authorId || ticket.requesterId,
-    message: comment,
-    createdAt: new Date().toISOString(),
-  });
-  }
-
-  writeDatabase(database);
-  return ticket;
-}
 
 router.patch("/tickets/:id/status", (request, response) => {
   const database = readDatabase();
