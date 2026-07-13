@@ -313,6 +313,13 @@ export const helpdeskService = {
       return requesterError;
     }
 
+    if (body.assignedToId) {
+      const assignedError = findUserOrFail(database.users, body.assignedToId, "Atendente invalido");
+      if (assignedError) {
+        return assignedError;
+      }
+    }
+
     const newTicket: Ticket = buildNewTicket(body);
 
     database.tickets.push(newTicket);
