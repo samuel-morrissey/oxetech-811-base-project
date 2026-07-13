@@ -60,7 +60,7 @@ I/O síncrono sem tratamento de erro de arquivo, sem lock para escrita concorren
 | 4 | Validação de entrada (DTOs/schema) na borda HTTP | Concluído |
 | 5 | Tratamento de erros consistente (classes de erro + middleware central) | Concluído |
 | 6 | Testes unitários e de integração (Vitest + supertest) | Concluído |
-| 7 | Correção de problemas básicos de segurança (exposição de `password`) | Pendente |
+| 7 | Correção de problemas básicos de segurança (exposição de `password`) | Concluído |
 
 ---
 
@@ -139,4 +139,29 @@ O tipo `FacadeResult` (agora em `helpdesk.service.ts`) ainda inclui `status: num
 
 ---
 
-*Documento em construção — próximas seções de solução e decisões serão adicionadas conforme cada frente do plano for concluída.*
+### 7. Segurança — remover `password` das respostas
+
+| | |
+|---|---|
+| **Problema** | Problema 7 do diagnóstico, pendente desde a Avaliação 1: `password` era exposta em `listUsers()` e no enrich de tickets (`enrichTicketListItem`/`enrichTicketDetail` faziam spread do `User` completo em `requester`, `assigned` e `author` dos comentários). |
+| **Solução** | Helper `toSafeUser(user)` em `helpdesk.service.ts`, que remove `password` via destructuring (`const { password, ...safeUser } = user`). Aplicado em `listUsers()` e nos três pontos de enrich (`requester`, `assigned`, `author`). Tipo `SafeUser = Omit<User, "password">` usado como retorno. |
+| **Onde** | `src/services/helpdesk.service.ts`. |
+| **Verificação** | `npm run typecheck` sem erros; 2 testes novos em `app.test.ts` (`GET /api/users` sem `password`; ticket enriquecido sem `password` em `requester`/`assigned`) — suíte completa com 20 testes passando; teste manual confirmando `password` ausente em `GET /api/users` e `GET /api/tickets/:id`. |
+
+---
+
+## Fechamento — Avaliação 2
+
+Todas as 7 frentes do plano foram concluídas:
+
+1. Diagnóstico atualizado
+2. Separação em camadas (controller / service / repository)
+3. Melhoria de fluxo (validação de `assignedToId`/`authorId`)
+4. Validação de entrada (DTOs) na borda HTTP
+5. Tratamento de erros consistente (classes de erro + middleware central)
+6. Testes unitários e de integração (Vitest + supertest, 20 testes)
+7. Segurança — remoção de `password` das respostas
+
+O problema 8 (persistência frágil — I/O síncrono, sem lock, `generateId` com risco de colisão) permanece como **limitação conhecida**, documentada e fora do escopo desta avaliação, conforme `docs/CHECKPOINTS.md`.
+
+*Documento fechado para a entrega da Avaliação 2.*
