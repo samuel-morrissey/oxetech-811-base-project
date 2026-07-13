@@ -3,5 +3,8 @@ dist/
 .env
 .DS_Store
 npm-debug.log*
+coverage/
 
-TEACHER_GUIDE.md
+docs/
+
+!docs/CHECKPOINTS.md
