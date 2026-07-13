@@ -347,6 +347,13 @@ export const helpdeskService = {
       return missingCommentForClosedResponse();
     }
 
+    if (body.authorId) {
+      const authorError = findUserOrFail(database.users, body.authorId, "Autor invalido");
+      if (authorError) {
+        return authorError;
+      }
+    }
+
     updateTicketWithStatus(ticket, body.status);
     addCommentIfProvided(database, ticket, body.comment, body.authorId);
 
