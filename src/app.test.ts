@@ -92,4 +92,22 @@ describe("GET /api/tickets", () => {
     expect(response.body).toHaveLength(1);
     expect(response.body[0].id).toBe("ticket_001");
   });
+
+  it("nao inclui a senha do requester/assigned no ticket enriquecido", async () => {
+    const response = await request(app).get("/api/tickets");
+
+    expect(response.body[0].requester.password).toBeUndefined();
+    expect(response.body[0].assigned.password).toBeUndefined();
+  });
+});
+
+describe("GET /api/users", () => {
+  it("nao inclui a senha dos usuarios", async () => {
+    const response = await request(app).get("/api/users");
+
+    expect(response.status).toBe(200);
+    for (const user of response.body) {
+      expect(user.password).toBeUndefined();
+    }
+  });
 });
