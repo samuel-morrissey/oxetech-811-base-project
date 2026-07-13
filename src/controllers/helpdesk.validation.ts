@@ -1,8 +1,5 @@
 import type { TicketStatus } from "../types";
-
-export type ValidationFailure = { ok: false; status: number; body: Record<string, unknown> };
-
-export type ValidationResult<T> = { ok: true; data: T } | ValidationFailure;
+import { BadRequestError } from "../errors/app-error";
 
 export type CreateTicketInput = {
   title: string;
@@ -43,12 +40,16 @@ function isValidStatus(status: unknown): status is TicketStatus {
   return typeof status === "string" && ALLOWED_STATUSES.includes(status as TicketStatus);
 }
 
-export function validateCreateTicketBody(body: unknown): ValidationResult<CreateTicketInput> {
+function assertPlainObject(body: unknown): asserts body is Record<string, unknown> {
   if (typeof body !== "object" || body === null) {
-    return { ok: false, status: 400, body: { message: "Corpo da requisicao invalido" } };
+    throw new BadRequestError("Corpo da requisicao invalido");
   }
+}
 
-  const { title, description, category, requesterId, assignedToId } = body as Record<string, unknown>;
+export function validateCreateTicketBody(body: unknown): CreateTicketInput {
+  assertPlainObject(body);
+
+  const { title, description, category, requesterId, assignedToId } = body;
 
   const missing: string[] = [];
   if (!isNonEmptyString(title)) missing.push("title");
@@ -57,83 +58,64 @@ export function validateCreateTicketBody(body: unknown): ValidationResult<Create
   if (!isNonEmptyString(requesterId)) missing.push("requesterId");
 
   if (missing.length > 0) {
-    return {
-      ok: false,
-      status: 400,
-      body: { message: "Campos obrigatorios ausentes ou invalidos", required: missing },
-    };
+    throw new BadRequestError("Campos obrigatorios ausentes ou invalidos", { required: missing });
   }
 
   if (!isOptionalNonEmptyString(assignedToId)) {
-    return { ok: false, status: 400, body: { message: "assignedToId deve ser uma string" } };
+    throw new BadRequestError("assignedToId deve ser uma string");
   }
 
   return {
-    ok: true,
-    data: {
-      title: title as string,
-      description: description as string,
-      category: category as string,
-      requesterId: requesterId as string,
-      assignedToId,
-    },
+    title: title as string,
+    description: description as string,
+    category: category as string,
+    requesterId: requesterId as string,
+    assignedToId,
   };
 }
 
-export function validateUpdateTicketStatusBody(body: unknown): ValidationResult<UpdateTicketStatusInput> {
-  if (typeof body !== "object" || body === null) {
-    return { ok: false, status: 400, body: { message: "Corpo da requisicao invalido" } };
-  }
+export function validateUpdateTicketStatusBody(body: unknown): UpdateTicketStatusInput {
+  assertPlainObject(body);
 
-  const { status, comment, authorId } = body as Record<string, unknown>;
+  const { status, comment, authorId } = body;
 
   if (!isValidStatus(status)) {
-    return {
-      ok: false,
-      status: 400,
-      body: { message: "Status invalido", allowed: ALLOWED_STATUSES },
-    };
+    throw new BadRequestError("Status invalido", { allowed: ALLOWED_STATUSES });
   }
 
   if (!isOptionalNonEmptyString(comment)) {
-    return { ok: false, status: 400, body: { message: "comment deve ser uma string" } };
+    throw new BadRequestError("comment deve ser uma string");
   }
 
   if (!isOptionalNonEmptyString(authorId)) {
-    return { ok: false, status: 400, body: { message: "authorId deve ser uma string" } };
+    throw new BadRequestError("authorId deve ser uma string");
   }
 
-  return { ok: true, data: { status, comment, authorId } };
+  return { status, comment, authorId };
 }
 
-export function validateAddCommentBody(body: unknown): ValidationResult<AddCommentInput> {
-  if (typeof body !== "object" || body === null) {
-    return { ok: false, status: 400, body: { error: "Corpo da requisicao invalido" } };
-  }
+export function validateAddCommentBody(body: unknown): AddCommentInput {
+  assertPlainObject(body);
 
-  const { message, authorId } = body as Record<string, unknown>;
+  const { message, authorId } = body;
 
   if (!isNonEmptyString(message) || !isNonEmptyString(authorId)) {
-    return { ok: false, status: 400, body: { error: "Comentario e autor sao obrigatorios" } };
+    throw new BadRequestError("Comentario e autor sao obrigatorios");
   }
 
-  return { ok: true, data: { message, authorId } };
+  return { message, authorId };
 }
 
-export function validateListTicketsQuery(query: unknown): ValidationResult<ListTicketsInput> {
+export function validateListTicketsQuery(query: unknown): ListTicketsInput {
   const { status, category, search } = (query ?? {}) as Record<string, unknown>;
 
   if (status !== undefined && !isValidStatus(status)) {
-    return {
-      ok: false,
-      status: 400,
-      body: { message: "Status invalido para filtro", allowed: ALLOWED_STATUSES },
-    };
+    throw new BadRequestError("Status invalido para filtro", { allowed: ALLOWED_STATUSES });
   }
 
   if (!isOptionalNonEmptyString(category) || !isOptionalNonEmptyString(search)) {
-    return { ok: false, status: 400, body: { message: "category e search devem ser strings" } };
+    throw new BadRequestError("category e search devem ser strings");
   }
 
-  return { ok: true, data: { status, category, search } };
+  return { status, category, search };
 }
