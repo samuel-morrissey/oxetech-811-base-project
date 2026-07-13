@@ -308,7 +308,7 @@ export const helpdeskService = {
       return requiredFieldsMissingResponse(body);
     }
 
-    const requesterError = findRequesterOrFail(database.users, body.requesterId);
+    const requesterError = findUserOrFail(database.users, body.requesterId, "Solicitante invalido");
     if (requesterError) {
       return requesterError;
     }
