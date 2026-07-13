@@ -59,7 +59,7 @@ I/O síncrono sem tratamento de erro de arquivo, sem lock para escrita concorren
 | 3 | Melhoria de fluxo relevante — validar `assignedToId` e `authorId` contra usuários existentes | Concluído |
 | 4 | Validação de entrada (DTOs/schema) na borda HTTP | Concluído |
 | 5 | Tratamento de erros consistente (classes de erro + middleware central) | Concluído |
-| 6 | Testes unitários e de integração (novo test runner a definir) | Pendente |
+| 6 | Testes unitários e de integração (Vitest + supertest) | Concluído |
 | 7 | Correção de problemas básicos de segurança (exposição de `password`) | Pendente |
 
 ---
@@ -120,6 +120,22 @@ O tipo `FacadeResult` (agora em `helpdesk.service.ts`) ainda inclui `status: num
 | **Contrato de erro unificado** | Todo erro da API (validação de formato, regra de negócio, 404 de rota inexistente, 500 genérico) responde no mesmo formato `{ error: string, ...detalhes opcionais }` — acaba a mistura `message`/`error` que existia desde a Avaliação 1. |
 | **Onde** | `src/errors/app-error.ts` (novo); `src/services/helpdesk.service.ts` e `src/controllers/helpdesk.validation.ts` (retornam dado direto, lançam erro); `src/controllers/helpdesk.controller.ts` (simplificado); `src/server.ts` (middleware de erro + 404 padronizado). |
 | **Verificação** | `npm run typecheck` sem erros. Testes manuais: ticket inexistente → 404 `{error, id}`; solicitante inválido → 400 `{error}`; campo obrigatório ausente → 400 `{error, required}`; fechar ticket sem comentário → 400; rota inexistente → 404 `{error}`; fluxo válido de criação (201) e listagem (200) continuam funcionando normalmente. |
+
+---
+
+### 6. Testes unitários e de integração
+
+| | |
+|---|---|
+| **Problema** | Problema 6 do diagnóstico: nenhuma verificação automática de regressão, só o roteiro manual via `httpyac`. |
+| **Escopo (decisão explícita)** | Só as partes/endpoints cruciais, sem cobertura ampla — decisão consciente pra não passar do escopo pedido ("não é esperado cobertura total de testes"). |
+| **Ferramenta** | **Vitest** escolhido em vez de Jest: TypeScript nativo (sem `ts-jest`/config de transformador extra), API compatível com Jest. `supertest` para os testes de integração HTTP. |
+| **Ajustes estruturais necessários para testar** | (1) `src/server.ts` foi separado: `src/app.ts` agora monta e exporta o Express `app` (sem `listen`); `server.ts` só importa e chama `app.listen(...)`. Permite importar o `app` num teste sem abrir porta real. (2) `src/repositories/database.repository.ts`: o cálculo do caminho do arquivo JSON deixou de ser feito uma vez no carregamento do módulo e passou para dentro de `getDatabasePath()` — permite cada teste apontar `DATA_FILE` para um banco temporário isolado. Nenhum dos dois ajustes muda comportamento em produção. |
+| **Testes escritos** | `ticket-priority.service.test.ts` (Strategy de prioridade — 6 casos); `helpdesk.validation.test.ts` (validação de formato — campos ausentes, tipo errado, status inválido); `app.test.ts` (integração via `supertest` contra os endpoints mais usados nesta conversa: criar ticket válido/solicitante inválido, ticket inexistente, fechar sem comentário, listar com filtro de status). Total: 18 testes. |
+| **Isolamento** | Os testes de integração usam um arquivo JSON temporário (`os.tmpdir()`), recriado a cada teste via `beforeEach`, e removido no `afterAll` — não tocam em `data/db.json`. |
+| **Scripts** | `npm test` agora roda `vitest run`; o roteiro manual antigo foi preservado em `npm run test:manual` (`httpyac`). |
+| **Onde** | `src/app.ts` (novo), `src/server.ts` (simplificado), `src/repositories/database.repository.ts` (path lazy), `src/services/ticket-priority.service.test.ts`, `src/controllers/helpdesk.validation.test.ts`, `src/app.test.ts` (novos), `package.json` (scripts e devDependencies). |
+| **Verificação** | `npm run typecheck` sem erros; `npm test` → 3 arquivos de teste, 18 testes, todos passando. |
 
 ---
 
