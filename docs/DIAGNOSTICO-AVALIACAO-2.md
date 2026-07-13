@@ -72,6 +72,7 @@ I/O síncrono sem tratamento de erro de arquivo, sem lock para escrita concorren
 |---|---|
 | **Problema** | `src/routes.ts` concentrava rotas Express, regra de negócio (`helpdeskFacade`) e persistência (`readDatabase`/`writeDatabase`) no mesmo arquivo — resolve os problemas 1 e 2 do diagnóstico. |
 | **Solução** | Divisão em três módulos por responsabilidade: `src/controllers/helpdesk.controller.ts` (rotas Express, apenas HTTP), `src/services/helpdesk.service.ts` (regra de negócio, `helpdeskService`) e `src/repositories/database.repository.ts` (`readDatabase`, `writeDatabase`, `generateId`). A regra de prioridade (Strategy da Avaliação 1) foi isolada em `src/services/ticket-priority.service.ts`. |
+| **Pattern aplicado — Repository** | `src/repositories/database.repository.ts` é uma aplicação do pattern **Repository**: isola o acesso a dados (leitura/escrita do JSON) atrás de uma interface simples (`readDatabase`, `writeDatabase`, `generateId`), escondendo do resto da aplicação como e onde os dados são persistidos. Antes, o service chamava `fs.readFileSync`/`fs.writeFileSync` diretamente; agora só conhece o repository. Trocar a persistência (ex.: para um banco real) exigiria mudar apenas esse módulo, sem tocar em service ou controller. |
 | **Dependências entre módulos** | `controller → service → repository`, sentido único. O controller não conhece persistência; o service não conhece Express (sem `Request`/`Response`). |
 | **`routes.ts`** | Removido; `src/server.ts` passa a importar o router de `./controllers/helpdesk.controller`. |
 | **Comportamento** | Preservado integralmente — apenas reorganização física de código, validado com `npm run typecheck` (sem erros). |
@@ -155,7 +156,7 @@ O tipo `FacadeResult` (agora em `helpdesk.service.ts`) ainda inclui `status: num
 Todas as 7 frentes do plano foram concluídas:
 
 1. Diagnóstico atualizado
-2. Separação em camadas (controller / service / repository)
+2. Separação em camadas (controller / service / repository) — pattern **Repository** aplicado na camada de persistência
 3. Melhoria de fluxo (validação de `assignedToId`/`authorId`)
 4. Validação de entrada (DTOs) na borda HTTP
 5. Tratamento de erros consistente (classes de erro + middleware central)
