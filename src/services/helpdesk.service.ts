@@ -1,10 +1,7 @@
 import type { Database, Ticket, TicketComment, TicketStatus, User } from "../types";
 import { generateId, readDatabase, writeDatabase } from "../repositories/database.repository";
 import { calculatePriority } from "./ticket-priority.service";
-
-export type FacadeResult<T = unknown> =
-  | { ok: true; status: number; data: T }
-  | { ok: false; status: number; body: Record<string, unknown> };
+import { BadRequestError, NotFoundError } from "../errors/app-error";
 
 type TicketListItem = ReturnType<typeof enrichTicketListItem>;
 type TicketDetail = ReturnType<typeof enrichTicketDetail>;
@@ -43,16 +40,11 @@ function enrichTicketDetail(database: Database, ticket: Ticket) {
   return { ...ticket, requester, assigned, comments };
 }
 
-function findUserOrFail(
-  users: User[],
-  id: string | undefined,
-  notFoundMessage: string,
-): FacadeResult<never> | null {
-  const user = users.find((user) => user.id === id);
-  if (!user) {
-    return { ok: false, status: 400, body: { message: notFoundMessage } };
+function assertUserExists(users: User[], id: string | undefined, notFoundMessage: string): void {
+  const exists = users.some((user) => user.id === id);
+  if (!exists) {
+    throw new BadRequestError(notFoundMessage);
   }
-  return null;
 }
 
 function buildNewTicket(body: {
@@ -75,14 +67,6 @@ function buildNewTicket(body: {
     createdAt: now,
     updatedAt: now,
   };
-}
-
-function successfulCreatedResponse<T>(data: T): FacadeResult<T> {
-  return { ok: true, status: 201, data };
-}
-
-function successfulOkResponse<T>(data: T): FacadeResult<T> {
-  return { ok: true, status: 200, data };
 }
 
 function filterTicketsByStatusAndCategory(
@@ -145,24 +129,8 @@ function findTicketById(tickets: Ticket[], id: string): Ticket | undefined {
   return tickets.find((item) => item.id === id);
 }
 
-function ticketNotFoundResponse(id: string): FacadeResult<TicketDetail> {
-  return {
-    ok: false,
-    status: 404,
-    body: { error: "Ticket nao encontrado", id },
-  };
-}
-
 function requiresCommentForClosed(status: TicketStatus, comment?: string): boolean {
   return status === "closed" && !comment;
-}
-
-function missingCommentForClosedResponse(): FacadeResult<Ticket> {
-  return {
-    ok: false,
-    status: 400,
-    body: { message: "Informe um comentario para fechar o chamado" },
-  };
 }
 
 function updateTicketWithStatus(ticket: Ticket, status: TicketStatus): void {
@@ -198,16 +166,15 @@ function buildComment(ticketId: string, message: string, authorId: string): Tick
 }
 
 export const helpdeskService = {
-  listUsers(): FacadeResult<User[]> {
-    const database = readDatabase();
-    return { ok: true, status: 200, data: database.users };
+  listUsers(): User[] {
+    return readDatabase().users;
   },
 
   listTickets(query: {
     status?: TicketStatus;
     category?: string;
     search?: string;
-  }): FacadeResult<TicketListItem[]> {
+  }): TicketListItem[] {
     const database = readDatabase();
     let filteredTickets = filterTicketsByStatusAndCategory(database.tickets, query);
 
@@ -215,34 +182,26 @@ export const helpdeskService = {
       filteredTickets = filterTicketsBySearch(filteredTickets, query.search);
     }
 
-    const ticketList = buildEnrichedTicketList(database, filteredTickets);
-
-    return successfulOkResponse(ticketList);
+    return buildEnrichedTicketList(database, filteredTickets);
   },
 
-  getTicketsSummary(): FacadeResult<TicketsSummary> {
+  getTicketsSummary(): TicketsSummary {
     const database = readDatabase();
     const statusCounts = countTicketsByStatus(database.tickets);
     const urgentCount = countTicketsByPriority(database.tickets);
 
-    const summary: TicketsSummary = {
-      ...statusCounts,
-      urgent: urgentCount,
-    };
-
-    return successfulOkResponse(summary);
+    return { ...statusCounts, urgent: urgentCount };
   },
 
-  getTicketById(id: string): FacadeResult<TicketDetail> {
+  getTicketById(id: string): TicketDetail {
     const database = readDatabase();
     const ticket = findTicketById(database.tickets, id);
 
     if (!ticket) {
-      return ticketNotFoundResponse(id);
+      throw new NotFoundError("Ticket nao encontrado", { id });
     }
 
-    const detail = enrichTicketDetail(database, ticket);
-    return successfulOkResponse(detail);
+    return enrichTicketDetail(database, ticket);
   },
 
   createTicket(body: {
@@ -251,73 +210,58 @@ export const helpdeskService = {
     category: string;
     requesterId: string;
     assignedToId?: string;
-  }): FacadeResult<Ticket> {
+  }): Ticket {
     const database = readDatabase();
 
-    const requesterError = findUserOrFail(database.users, body.requesterId, "Solicitante invalido");
-    if (requesterError) {
-      return requesterError;
-    }
+    assertUserExists(database.users, body.requesterId, "Solicitante invalido");
 
     if (body.assignedToId) {
-      const assignedError = findUserOrFail(database.users, body.assignedToId, "Atendente invalido");
-      if (assignedError) {
-        return assignedError;
-      }
+      assertUserExists(database.users, body.assignedToId, "Atendente invalido");
     }
 
-    const newTicket: Ticket = buildNewTicket(body);
+    const newTicket = buildNewTicket(body);
 
     database.tickets.push(newTicket);
     writeDatabase(database);
 
-    return successfulCreatedResponse(newTicket);
+    return newTicket;
   },
 
   updateTicketStatus(
     id: string,
     body: { status: TicketStatus; comment?: string; authorId?: string },
-  ): FacadeResult<Ticket> {
+  ): Ticket {
     const database = readDatabase();
     const ticket = findTicketById(database.tickets, id);
 
     if (!ticket) {
-      return { ok: false, status: 404, body: { message: "Ticket nao encontrado" } };
+      throw new NotFoundError("Ticket nao encontrado");
     }
 
     if (requiresCommentForClosed(body.status, body.comment)) {
-      return missingCommentForClosedResponse();
+      throw new BadRequestError("Informe um comentario para fechar o chamado");
     }
 
     if (body.authorId) {
-      const authorError = findUserOrFail(database.users, body.authorId, "Autor invalido");
-      if (authorError) {
-        return authorError;
-      }
+      assertUserExists(database.users, body.authorId, "Autor invalido");
     }
 
     updateTicketWithStatus(ticket, body.status);
     addCommentIfProvided(database, ticket, body.comment, body.authorId);
 
     writeDatabase(database);
-    return successfulOkResponse(ticket);
+    return ticket;
   },
 
-  addComment(
-    id: string,
-    body: { message: string; authorId: string },
-  ): FacadeResult<TicketComment> {
+  addComment(id: string, body: { message: string; authorId: string }): TicketComment {
     const database = readDatabase();
     const ticket = findTicketById(database.tickets, id);
 
     if (!ticket) {
-      return { ok: false, status: 404, body: { error: "Ticket nao encontrado" } };
+      throw new NotFoundError("Ticket nao encontrado");
     }
 
-    const authorError = findUserOrFail(database.users, body.authorId, "Autor invalido");
-    if (authorError) {
-      return authorError;
-    }
+    assertUserExists(database.users, body.authorId, "Autor invalido");
 
     const comment = buildComment(ticket.id, body.message, body.authorId);
 
@@ -325,6 +269,6 @@ export const helpdeskService = {
     ticket.updatedAt = new Date().toISOString();
     writeDatabase(database);
 
-    return successfulCreatedResponse(comment);
+    return comment;
   },
 };
