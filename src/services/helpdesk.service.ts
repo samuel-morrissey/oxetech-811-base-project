@@ -5,6 +5,7 @@ import { BadRequestError, NotFoundError } from "../errors/app-error";
 
 type TicketListItem = ReturnType<typeof enrichTicketListItem>;
 type TicketDetail = ReturnType<typeof enrichTicketDetail>;
+type SafeUser = Omit<User, "password">;
 
 type TicketsSummary = {
   open: number;
@@ -14,9 +15,18 @@ type TicketsSummary = {
   urgent: number;
 };
 
+function toSafeUser(user: User | undefined): SafeUser | undefined {
+  if (!user) {
+    return undefined;
+  }
+
+  const { password, ...safeUser } = user;
+  return safeUser;
+}
+
 function enrichTicketListItem(database: Database, ticket: Ticket) {
-  const requester = database.users.find((user) => user.id === ticket.requesterId);
-  const assigned = database.users.find((user) => user.id === ticket.assignedToId);
+  const requester = toSafeUser(database.users.find((user) => user.id === ticket.requesterId));
+  const assigned = toSafeUser(database.users.find((user) => user.id === ticket.assignedToId));
   const comments = database.comments.filter((comment) => comment.ticketId === ticket.id);
 
   return {
@@ -28,13 +38,13 @@ function enrichTicketListItem(database: Database, ticket: Ticket) {
 }
 
 function enrichTicketDetail(database: Database, ticket: Ticket) {
-  const requester = database.users.find((user) => user.id === ticket.requesterId);
-  const assigned = database.users.find((user) => user.id === ticket.assignedToId);
+  const requester = toSafeUser(database.users.find((user) => user.id === ticket.requesterId));
+  const assigned = toSafeUser(database.users.find((user) => user.id === ticket.assignedToId));
   const comments = database.comments
     .filter((comment) => comment.ticketId === ticket.id)
     .map((comment) => ({
       ...comment,
-      author: database.users.find((user) => user.id === comment.authorId),
+      author: toSafeUser(database.users.find((user) => user.id === comment.authorId)),
     }));
 
   return { ...ticket, requester, assigned, comments };
@@ -166,8 +176,8 @@ function buildComment(ticketId: string, message: string, authorId: string): Tick
 }
 
 export const helpdeskService = {
-  listUsers(): User[] {
-    return readDatabase().users;
+  listUsers(): SafeUser[] {
+    return readDatabase().users.map((user) => toSafeUser(user) as SafeUser);
   },
 
   listTickets(query: {
