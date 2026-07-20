@@ -12,7 +12,8 @@
     "build": "tsc",
     "typecheck": "tsc --noEmit",
     "seed": "tsx src/seed.ts",
-    "test": "echo \"Nenhum teste automatizado configurado ainda. Crie testes durante a refatoracao.\" && exit 0"
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "cors": "^2.8.6",
@@ -24,6 +25,7 @@
     "@types/express": "^5.0.6",
     "@types/node": "^25.9.1",
     "tsx": "^4.22.3",
-    "typescript": "^6.0.3"
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.10"
   }
 }
