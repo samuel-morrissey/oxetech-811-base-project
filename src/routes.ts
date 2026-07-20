@@ -1,7 +1,8 @@
-import { Router } from "express";
+import { Router, type Response } from "express";
 import fs from "node:fs";
 import path from "node:path";
-import type { Database, Ticket, TicketPriority, TicketStatus } from "./types";
+import type {Database, Ticket, TicketComment, TicketPriority, TicketStatus, User,
+} from "./types";
 
 const router = Router();
 const dataFile = process.env.DATA_FILE || "data/db.json";
@@ -20,100 +21,72 @@ function generateId(prefix: string) {
   return `${prefix}_${Date.now()}_${Math.floor(Math.random() * 10000)}`;
 }
 
-function calculatePriority(category: string, description: string): TicketPriority {
-  if (category === "infra" || description.toLowerCase().includes("urgente")) {
-    return "urgent";
-  }
+const LONG_DESCRIPTION_THRESHOLD = 220;
 
-  if (category === "sistemas" || description.length > 220) {
-    return "high";
-  }
+type PriorityContext = {
+  category: string;
+  description: string;
+};
 
-  if (category === "academico") {
-    return "medium";
-  }
+type PriorityRule = {
+  appliesTo: (context: PriorityContext) => boolean;
+  priority: TicketPriority;
+};
 
-  return "low";
+function isUrgentPriority({ category, description }: PriorityContext): boolean {
+  return category === "infra" || description.toLowerCase().includes("urgente");
 }
 
-router.get("/health", (_request, response) => {
-  response.json({ status: "ok", service: "oxetech-helpdesk" });
-});
+function isHighPriority({ category, description }: PriorityContext): boolean {
+  return category === "sistemas" || description.length > LONG_DESCRIPTION_THRESHOLD;
+}
 
-router.get("/users", (_request, response) => {
-  const database = readDatabase();
+function isMediumPriority({ category }: PriorityContext): boolean {
+  return category === "academico";
+}
 
-  response.json(database.users);
-});
+const priorityRules: PriorityRule[] = [
+  { appliesTo: isUrgentPriority, priority: "urgent" },
+  { appliesTo: isHighPriority, priority: "high" },
+  { appliesTo: isMediumPriority, priority: "medium" },
+];
 
-router.get("/tickets", (request, response) => {
-  const database = readDatabase();
-  let tickets = database.tickets;
+function calculatePriority(category: string, description: string): TicketPriority {
+  const context: PriorityContext = { category, description };
 
-  if (request.query.status) {
-    tickets = tickets.filter((ticket) => ticket.status === request.query.status);
-  }
+  const matchedRule = priorityRules.find((rule) => rule.appliesTo(context));
+  return matchedRule?.priority ?? "low";
+}
 
-  if (request.query.category) {
-    tickets = tickets.filter((ticket) => ticket.category === request.query.category);
-  }
+type FacadeResult<T = unknown> =
+  | { ok: true; status: number; data: T }
+  | { ok: false; status: number; body: Record<string, unknown> };
 
-  if (request.query.search) {
-    const search = String(request.query.search).toLowerCase();
-    tickets = tickets.filter(
-      (ticket) =>
-        ticket.title.toLowerCase().includes(search) ||
-        ticket.description.toLowerCase().includes(search) ||
-        ticket.category.toLowerCase().includes(search),
-    );
-  }
+type TicketListItem = ReturnType<typeof enrichTicketListItem>;
+type TicketDetail = ReturnType<typeof enrichTicketDetail>;
 
-  const result = tickets.map((ticket) => {
-    const requester = database.users.find((user) => user.id === ticket.requesterId);
-    const assigned = database.users.find((user) => user.id === ticket.assignedToId);
-    const comments = database.comments.filter((comment) => comment.ticketId === ticket.id);
+type TicketsSummary = {
+  open: number;
+  in_progress: number;
+  resolved: number;
+  closed: number;
+  urgent: number;
+};
 
-    return {
-      ...ticket,
-      requester,
-      assigned,
-      commentsCount: comments.length,
-    };
-  });
+function enrichTicketListItem(database: Database, ticket: Ticket) {
+  const requester = database.users.find((user) => user.id === ticket.requesterId);
+  const assigned = database.users.find((user) => user.id === ticket.assignedToId);
+  const comments = database.comments.filter((comment) => comment.ticketId === ticket.id);
 
-  response.json(result);
-});
-
-router.get("/tickets/summary", (_request, response) => {
-  const database = readDatabase();
-  const summary = {
-    open: 0,
-    in_progress: 0,
-    resolved: 0,
-    closed: 0,
-    urgent: 0,
+  return {
+    ...ticket,
+    requester,
+    assigned,
+    commentsCount: comments.length,
   };
+}
 
-  for (const ticket of database.tickets) {
-    if (ticket.status === "open") summary.open++;
-    if (ticket.status === "in_progress") summary.in_progress++;
-    if (ticket.status === "resolved") summary.resolved++;
-    if (ticket.status === "closed") summary.closed++;
-    if (ticket.priority === "urgent") summary.urgent++;
-  }
-
-  response.json(summary);
-});
-
-router.get("/tickets/:id", (request, response) => {
-  const database = readDatabase();
-  const ticket = database.tickets.find((item) => item.id === request.params.id);
-
-  if (!ticket) {
-    response.status(404).json({ error: "Ticket nao encontrado", id: request.params.id });
-    return;
-  }
-
+function enrichTicketDetail(database: Database, ticket: Ticket) {
   const requester = database.users.find((user) => user.id === ticket.requesterId);
   const assigned = database.users.find((user) => user.id === ticket.assignedToId);
   const comments = database.comments
@@ -123,30 +96,55 @@ router.get("/tickets/:id", (request, response) => {
       author: database.users.find((user) => user.id === comment.authorId),
     }));
 
-  response.json({ ...ticket, requester, assigned, comments });
-});
+  return { ...ticket, requester, assigned, comments };
+}
 
-router.post("/tickets", (request, response) => {
-  const database = readDatabase();
-  const body = request.body;
-
-  if (!body.title || !body.description || !body.category || !body.requesterId) {
-    response.status(400).json({
-      message: "Campos obrigatorios ausentes",
-      required: ["title", "description", "category", "requesterId"],
-      received: body,
-    });
+function sendFacadeResult<T>(response: Response, result: FacadeResult<T>) {
+  if (!result.ok) {
+    response.status(result.status).json(result.body);
     return;
   }
 
-  const user = database.users.find((item) => item.id === body.requesterId);
-  if (!user) {
-    response.status(400).json({ message: "Solicitante invalido" });
-    return;
-  }
+  response.status(result.status).json(result.data);
+}
 
+function hasRequiredTicketFields(body: {
+  title: string;
+  description: string;
+  category: string;
+  requesterId: string;
+  assignedToId?: string;
+}): boolean {
+  return Boolean(body.title && body.description && body.category && body.requesterId);
+}
+
+function requiredFieldsMissingResponse(body: {
+  title?: string;
+  description?: string;
+  category?: string;
+  requesterId?: string;
+  assignedToId?: string;
+}): FacadeResult<Ticket> {
+  return { ok: false, status: 400, body: { message: "Campos obrigatorios ausentes", required: ["title", "description", "category", "requesterId"], received: body } };
+}
+
+function findRequesterOrFail(users: User[], id?: string): FacadeResult<never> | null {
+  const requester = users.find((user) => user.id === id);
+  if (!requester) {
+    return { ok: false, status: 400, body: { message: "Solicitante invalido" } };
+  }
+  return null;
+}
+
+function buildNewTicket(body: {
+  title: string;
+  description: string;
+  category: string;
+  requesterId: string;
+  assignedToId?: string;
+}): Ticket {
   const now = new Date().toISOString();
-  const ticket: Ticket = {
+  return {
     id: generateId("ticket"),
     title: body.title,
     description: body.description,
@@ -158,78 +156,316 @@ router.post("/tickets", (request, response) => {
     createdAt: now,
     updatedAt: now,
   };
+}
 
-  database.tickets.push(ticket);
-  writeDatabase(database);
+function successfulCreatedResponse<T>(data: T): FacadeResult<T> {
+  return { ok: true, status: 201, data };
+}
 
-  response.status(201).json(ticket);
-});
+function successfulOkResponse<T>(data: T): FacadeResult<T> {
+  return { ok: true, status: 200, data };
+}
 
-router.patch("/tickets/:id/status", (request, response) => {
-  const database = readDatabase();
-  const ticket = database.tickets.find((item) => item.id === request.params.id);
-  const newStatus = request.body.status as TicketStatus;
+function filterTicketsByStatusAndCategory(
+  tickets: Ticket[],
+  query: { status?: unknown; category?: unknown },
+): Ticket[] {
+  let filteredTickets = tickets;
 
-  if (!ticket) {
-    response.status(404).json({ message: "Ticket nao encontrado" });
-    return;
+  if (query.status) {
+    filteredTickets = filteredTickets.filter((ticket) => ticket.status === query.status);
   }
 
-  if (!["open", "in_progress", "resolved", "closed"].includes(newStatus)) {
-    response.status(400).json({ message: "Status invalido", allowed: ["open", "in_progress", "resolved", "closed"] });
-    return;
+  if (query.category) {
+    filteredTickets = filteredTickets.filter((ticket) => ticket.category === query.category);
   }
 
-  if (newStatus === "closed" && !request.body.comment) {
-    response.status(400).json({ message: "Informe um comentario para fechar o chamado" });
-    return;
+  return filteredTickets;
+}
+
+function filterTicketsBySearch(tickets: Ticket[], search: string): Ticket[] {
+  const normalizedSearch = search.toLowerCase();
+
+  return tickets.filter(
+    (ticket) =>
+      ticket.title.toLowerCase().includes(normalizedSearch) ||
+      ticket.description.toLowerCase().includes(normalizedSearch) ||
+      ticket.category.toLowerCase().includes(normalizedSearch),
+  );
+}
+
+function buildEnrichedTicketList(database: Database, tickets: Ticket[]): TicketListItem[] {
+  return tickets.map((ticket) => enrichTicketListItem(database, ticket));
+}
+
+function countTicketsByStatus(
+  tickets: Ticket[],
+): { open: number; in_progress: number; resolved: number; closed: number } {
+  const counts = {
+    open: 0,
+    in_progress: 0,
+    resolved: 0,
+    closed: 0,
+  };
+
+  for (const ticket of tickets) {
+    if (ticket.status === "open") counts.open++;
+    if (ticket.status === "in_progress") counts.in_progress++;
+    if (ticket.status === "resolved") counts.resolved++;
+    if (ticket.status === "closed") counts.closed++;
   }
 
-  ticket.status = newStatus;
+  return counts;
+}
+
+function countTicketsByPriority(tickets: Ticket[]): number {
+  return tickets.filter((ticket) => ticket.priority === "urgent").length;
+}
+
+function findTicketById(tickets: Ticket[], id: string): Ticket | undefined {
+  return tickets.find((item) => item.id === id);
+}
+
+function ticketNotFoundResponse(id: string): FacadeResult<TicketDetail> {
+  return {
+    ok: false,
+    status: 404,
+    body: { error: "Ticket nao encontrado", id },
+  };
+}
+
+function isValidStatus(status: unknown): status is TicketStatus {
+  return ["open", "in_progress", "resolved", "closed"].includes(String(status));
+}
+
+function invalidStatusResponse(): FacadeResult<Ticket> {
+  return {
+    ok: false,
+    status: 400,
+    body: {
+      message: "Status invalido",
+      allowed: ["open", "in_progress", "resolved", "closed"],
+    },
+  };
+}
+
+function requiresCommentForClosed(status: TicketStatus, comment?: string): boolean {
+  return status === "closed" && !comment;
+}
+
+function missingCommentForClosedResponse(): FacadeResult<Ticket> {
+  return {
+    ok: false,
+    status: 400,
+    body: { message: "Informe um comentario para fechar o chamado" },
+  };
+}
+
+function updateTicketWithStatus(ticket: Ticket, status: TicketStatus): void {
+  ticket.status = status;
   ticket.updatedAt = new Date().toISOString();
+}
 
-  if (request.body.comment) {
+function addCommentIfProvided(
+  database: Database,
+  ticket: Ticket,
+  comment?: string,
+  authorId?: string,
+): void {
+  if (comment) {
     database.comments.push({
       id: generateId("comment"),
       ticketId: ticket.id,
-      authorId: request.body.authorId || ticket.requesterId,
-      message: request.body.comment,
+      authorId: authorId || ticket.requesterId,
+      message: comment,
       createdAt: new Date().toISOString(),
     });
   }
+}
 
-  writeDatabase(database);
-  response.json(ticket);
+function hasRequiredCommentFields(body: {
+  message?: string;
+  authorId?: string;
+}): boolean {
+  return Boolean(body.message && body.authorId);
+}
+
+function missingCommentFieldsResponse(): FacadeResult<TicketComment> {
+  return {
+    ok: false,
+    status: 400,
+    body: { error: "Comentario e autor sao obrigatorios" },
+  };
+}
+
+function buildComment(ticketId: string, message: string, authorId: string): TicketComment {
+  return {
+    id: generateId("comment"),
+    ticketId,
+    authorId,
+    message,
+    createdAt: new Date().toISOString(),
+  };
+}
+
+const helpdeskFacade = {
+  listUsers(): FacadeResult<User[]> {
+    const database = readDatabase();
+    return { ok: true, status: 200, data: database.users };
+  },
+
+  listTickets(query: {
+    status?: unknown;
+    category?: unknown;
+    search?: unknown;
+  }): FacadeResult<TicketListItem[]> {
+    const database = readDatabase();
+    let filteredTickets = filterTicketsByStatusAndCategory(database.tickets, query);
+
+    if (query.search) {
+      filteredTickets = filterTicketsBySearch(filteredTickets, String(query.search));
+    }
+
+    const ticketList = buildEnrichedTicketList(database, filteredTickets);
+
+    return successfulOkResponse(ticketList);
+  },
+
+  getTicketsSummary(): FacadeResult<TicketsSummary> {
+    const database = readDatabase();
+    const statusCounts = countTicketsByStatus(database.tickets);
+    const urgentCount = countTicketsByPriority(database.tickets);
+
+    const summary: TicketsSummary = {
+      ...statusCounts,
+      urgent: urgentCount,
+    };
+
+    return successfulOkResponse(summary);
+  },
+
+  getTicketById(id: string): FacadeResult<TicketDetail> {
+    const database = readDatabase();
+    const ticket = findTicketById(database.tickets, id);
+
+    if (!ticket) {
+      return ticketNotFoundResponse(id);
+    }
+
+    const detail = enrichTicketDetail(database, ticket);
+    return successfulOkResponse(detail);
+  },
+
+  createTicket(body: {
+    title: string;
+    description: string;
+    category: string;
+    requesterId: string;
+    assignedToId?: string;
+  }): FacadeResult<Ticket> {
+    const database = readDatabase();
+
+    if (!hasRequiredTicketFields(body)) {
+      return requiredFieldsMissingResponse(body);
+    }
+
+    const requesterError = findRequesterOrFail(database.users, body.requesterId);
+    if (requesterError) {
+      return requesterError;
+    }
+
+    const newTicket: Ticket = buildNewTicket(body);
+
+    database.tickets.push(newTicket);
+    writeDatabase(database);
+
+    return successfulCreatedResponse(newTicket);
+  },
+
+  updateTicketStatus(
+    id: string,
+    body: { status?: TicketStatus; comment?: string; authorId?: string },
+  ): FacadeResult<Ticket> {
+    const database = readDatabase();
+    const ticket = findTicketById(database.tickets, id);
+
+    if (!ticket) {
+      return { ok: false, status: 404, body: { message: "Ticket nao encontrado" } };
+    }
+
+    if (!isValidStatus(body.status)) {
+      return invalidStatusResponse();
+    }
+
+    if (requiresCommentForClosed(body.status, body.comment)) {
+      return missingCommentForClosedResponse();
+    }
+
+    updateTicketWithStatus(ticket, body.status);
+    addCommentIfProvided(database, ticket, body.comment, body.authorId);
+
+    writeDatabase(database);
+    return successfulOkResponse(ticket);
+  },
+
+  addComment(
+    id: string,
+    body: { message?: string; authorId?: string },
+  ): FacadeResult<TicketComment> {
+    const database = readDatabase();
+    const ticket = findTicketById(database.tickets, id);
+
+    if (!ticket) {
+      return { ok: false, status: 404, body: { error: "Ticket nao encontrado" } };
+    }
+
+    if (!hasRequiredCommentFields(body)) {
+      return missingCommentFieldsResponse();
+    }
+
+    const comment = buildComment(ticket.id, body.message as string, body.authorId as string);
+
+    database.comments.push(comment);
+    ticket.updatedAt = new Date().toISOString();
+    writeDatabase(database);
+
+    return successfulCreatedResponse(comment);
+  },
+};
+
+router.get("/health", (_request, response) => {
+  response.json({ status: "ok", service: "oxetech-helpdesk" });
+});
+
+router.get("/users", (_request, response) => {
+  sendFacadeResult(response, helpdeskFacade.listUsers());
+});
+
+router.get("/tickets", (request, response) => {
+  sendFacadeResult(response, helpdeskFacade.listTickets(request.query));
+});
+
+router.get("/tickets/summary", (_request, response) => {
+  sendFacadeResult(response, helpdeskFacade.getTicketsSummary());
+});
+
+router.get("/tickets/:id", (request, response) => {
+  sendFacadeResult(response, helpdeskFacade.getTicketById(request.params.id));
+});
+
+router.post("/tickets", (request, response) => {
+  sendFacadeResult(response, helpdeskFacade.createTicket(request.body));
+});
+
+router.patch("/tickets/:id/status", (request, response) => {
+  sendFacadeResult(
+    response,
+    helpdeskFacade.updateTicketStatus(request.params.id, request.body),
+  );
 });
 
 router.post("/tickets/:id/comments", (request, response) => {
-  const database = readDatabase();
-  const ticket = database.tickets.find((item) => item.id === request.params.id);
-  const body = request.body;
-
-  if (!ticket) {
-    response.status(404).json({ error: "Ticket nao encontrado" });
-    return;
-  }
-
-  if (!body.message || !body.authorId) {
-    response.status(400).json({ error: "Comentario e autor sao obrigatorios" });
-    return;
-  }
-
-  const comment = {
-    id: generateId("comment"),
-    ticketId: ticket.id,
-    authorId: body.authorId,
-    message: body.message,
-    createdAt: new Date().toISOString(),
-  };
-
-  database.comments.push(comment);
-  ticket.updatedAt = new Date().toISOString();
-  writeDatabase(database);
-
-  response.status(201).json(comment);
+  sendFacadeResult(response, helpdeskFacade.addComment(request.params.id, request.body));
 });
 
 export default router;
