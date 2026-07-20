@@ -1,6 +1,5 @@
-export type TicketStatus = "open" | "in_progress" | "resolved" | "closed";
+import { Ticket } from "../core/Ticket";
 
-export type TicketPriority = "low" | "medium" | "high" | "urgent";
 
 export type UserRole = "student" | "teacher" | "support";
 
@@ -18,19 +17,6 @@ export interface TicketComment {
   authorId: string;
   message: string;
   createdAt: string;
-}
-
-export interface Ticket {
-  id: string;
-  title: string;
-  description: string;
-  category: string;
-  status: TicketStatus;
-  priority: TicketPriority;
-  requesterId: string;
-  assignedToId?: string;
-  createdAt: string;
-  updatedAt: string;
 }
 
 export interface Database {

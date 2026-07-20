@@ -1,26 +1,25 @@
 ## Diagnostico
-
-Descreva os principais problemas encontrados na codebase antes desta mudanca.
+	
+	- Os principais problemas encontrados foram os magic number/String e os endpoint que feriam o primeiro 	princípio do SOLID, o princípio da responsabilidade única.
 
 ## Mudancas realizadas
 
-Liste as alteracoes feitas neste Pull Request.
+	- Magic number (function calculatePriority)
+	- Magic String (function calculatePriority)
+	- Long Funtion (router.get("/tickets", (request, response)))
+	- Single Responsibility Principle (router.get("/tickets/summary", (_request, response)))
+	- Single Responsibility Principle (router.patch("/tickets/:id/status", (request, response)))
 
 ## Conceitos aplicados
 
-Explique quais conceitos do curso foram usados, como Clean Code, SOLID, patterns, testes, validacao, Docker ou CI.
+	- Clean Code para refatoração 
+	- SOLID para identificação de endpoints/funções de atenção
+	- Code Smells
 
 ## Evidencias de funcionamento
 
-Informe como voce validou a mudanca.
-
-Exemplos:
-
-- `npm run typecheck`
-- `npm run build`
-- `npm test`
-- teste manual de endpoint especifico
+	- Valide a funcionalidade através do `npm run typecheck` e testando todos os endpoint depois de cada 	refatoração.
 
 ## Limitacoes conhecidas
 
-Registre o que ainda nao foi resolvido e pode ficar para proximos PRs.
+Análise dos demais endpoints.

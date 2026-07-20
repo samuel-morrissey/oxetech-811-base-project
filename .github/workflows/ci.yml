@@ -1,0 +1,78 @@
+name: CI
+
+# Roda os quality gates sempre que um Pull Request for aberto para a branch main.
+on:
+  pull_request:
+    branches: [main]
+
+# Permissao minima: o pipeline so precisa ler o codigo do repositorio.
+permissions:
+  contents: read
+
+jobs:
+  quality-gates:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Baixar o codigo
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      # Build primeiro: gera o Prisma Client e compila o TypeScript.
+      # Se o projeto nem compila, nao vale a pena rodar o resto.
+      - name: Build
+        run: npm run build
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Testes com coverage
+        run: npm run test:coverage
+
+      # O relatorio de coverage fica disponivel para download na pagina do workflow.
+      - name: Publicar relatorio de coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: coverage/
+
+  # So roda se os quality gates passarem: falhar cedo economiza tempo de runner.
+  docker-image:
+    runs-on: ubuntu-latest
+    needs: quality-gates
+    steps:
+      - name: Baixar o codigo
+        uses: actions/checkout@v4
+
+      # Tag com o SHA do commit: sempre da para saber qual codigo gerou a imagem.
+      - name: Construir a imagem
+        run: docker build -t oxetech-helpdesk:${{ github.sha }} .
+
+      # DATABASE_URL aqui e uma variavel de ambiente comum (valor falso, nao sensivel).
+      # Um secret de verdade (token de registry, string de conexao real) ficaria em
+      # Settings > Secrets and variables > Actions e seria lido como ${{ secrets.NOME }}.
+      - name: Subir o container e validar o healthcheck
+        run: |
+          docker run -d --name api -p 3000:3000 \
+            -e DATABASE_URL="postgresql://ci:ci@localhost:5432/ci" \
+            oxetech-helpdesk:${{ github.sha }}
+          for i in $(seq 1 10); do
+            if curl -fsS http://localhost:3000/api/health; then
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "Healthcheck falhou. Logs do container:"
+          docker logs api
+          exit 1
+
+      - name: Encerrar o container
+        if: always()
+        run: docker rm -f api
