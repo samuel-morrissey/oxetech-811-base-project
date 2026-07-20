@@ -1,64 +1,37 @@
-import {
-  ID,
-  PRIORITY_RULES,
-  TICKET_CATEGORY,
-  TICKET_PRIORITY,
-  TICKET_STATUS,
-} from "../constants";
+import { TICKET_STATUS } from "../constants";
 import type {
   AddTicketCommentInput,
   CreateTicketInput,
   UpdateTicketStatusInput,
 } from "../dtos/ticketDtos";
 import {
-  addComment,
-  addTicket,
-  buildCommentCountByTicket,
-  buildUserMap,
-  findAllTickets,
-  findCommentsByTicketId,
-  findTicketById,
-  findUserById,
-  loadDatabase,
-  saveDatabase,
-  touchTicket,
+  jsonTicketRepository,
+  type TicketRepository,
 } from "../repositories/ticketRepository";
 import type {
   AddTicketCommentResult,
   CreateTicketResult,
   Ticket,
-  TicketComment,
   TicketDetail,
   TicketListFilters,
   TicketListItem,
-  TicketPriority,
   UpdateTicketStatusResult,
   User,
 } from "../types";
-import { generateId } from "../utils/generateId";
+import { makeComment, makeTicket } from "./ticketFactory";
 
-function calculatePriority(category: string, description: string): TicketPriority {
-  const normalizedDescription = description.toLowerCase();
-
-  if (
-    category === TICKET_CATEGORY.INFRA ||
-    normalizedDescription.includes(PRIORITY_RULES.URGENT_KEYWORD)
-  ) {
-    return TICKET_PRIORITY.URGENT;
-  }
-
-  if (
-    category === TICKET_CATEGORY.SISTEMAS ||
-    description.length > PRIORITY_RULES.LONG_DESCRIPTION_THRESHOLD
-  ) {
-    return TICKET_PRIORITY.HIGH;
-  }
-
-  if (category === TICKET_CATEGORY.ACADEMICO) {
-    return TICKET_PRIORITY.MEDIUM;
-  }
-
-  return TICKET_PRIORITY.LOW;
+export interface TicketService {
+  listTickets(filters: TicketListFilters): TicketListItem[];
+  getTicketById(id: string): TicketDetail | null;
+  createTicket(input: CreateTicketInput): CreateTicketResult;
+  updateTicketStatus(
+    id: string,
+    input: UpdateTicketStatusInput,
+  ): UpdateTicketStatusResult;
+  addTicketComment(
+    id: string,
+    input: AddTicketCommentInput,
+  ): AddTicketCommentResult;
 }
 
 function filterTickets(tickets: Ticket[], filters: TicketListFilters): Ticket[] {
@@ -85,20 +58,6 @@ function filterTickets(tickets: Ticket[], filters: TicketListFilters): Ticket[] 
   return result;
 }
 
-function createCommentRecord(
-  ticketId: string,
-  authorId: string,
-  message: string,
-): TicketComment {
-  return {
-    id: generateId(ID.PREFIX.COMMENT),
-    ticketId,
-    authorId,
-    message,
-    createdAt: new Date().toISOString(),
-  };
-}
-
 function toTicketListItem(
   ticket: Ticket,
   userMap: Map<string, User>,
@@ -112,110 +71,139 @@ function toTicketListItem(
   };
 }
 
-export function listTickets(filters: TicketListFilters): TicketListItem[] {
-  const database = loadDatabase();
-  const userMap = buildUserMap(database);
-  const commentCounts = buildCommentCountByTicket(database);
-  const filteredTickets = filterTickets(findAllTickets(database), filters);
+/**
+ * Service factory: aceita um TicketRepository via parametro (Dependency Injection).
+ * Facilita substituicao em testes e desacopla logica de negocio do storage concreto.
+ * Ver docs/DESIGN_PATTERNS.md#2-repository-interface.
+ */
+export function createTicketService(repo: TicketRepository): TicketService {
+  function listTickets(filters: TicketListFilters): TicketListItem[] {
+    const database = repo.load();
+    const userMap = repo.buildUserMap(database);
+    const commentCounts = repo.buildCommentCountByTicket(database);
+    const filteredTickets = filterTickets(
+      repo.findAllTickets(database),
+      filters,
+    );
 
-  return filteredTickets.map((ticket) => toTicketListItem(ticket, userMap, commentCounts));
-}
-
-export function getTicketById(id: string): TicketDetail | null {
-  const database = loadDatabase();
-  const ticket = findTicketById(database, id);
-
-  if (!ticket) {
-    return null;
-  }
-
-  const requester = findUserById(database, ticket.requesterId);
-  const assigned = ticket.assignedToId ? findUserById(database, ticket.assignedToId) : undefined;
-  const comments = findCommentsByTicketId(database, ticket.id).map((comment) => ({
-    ...comment,
-    author: findUserById(database, comment.authorId),
-  }));
-
-  return { ...ticket, requester, assigned, comments };
-}
-
-export function createTicket(input: CreateTicketInput): CreateTicketResult {
-  const database = loadDatabase();
-
-  if (!findUserById(database, input.requesterId)) {
-    return { success: false, error: { code: "invalid_requester" } };
-  }
-
-  const now = new Date().toISOString();
-  const ticket: Ticket = {
-    id: generateId(ID.PREFIX.TICKET),
-    title: input.title,
-    description: input.description,
-    category: input.category,
-    requesterId: input.requesterId,
-    assignedToId: input.assignedToId,
-    status: TICKET_STATUS.OPEN,
-    priority: calculatePriority(input.category, input.description),
-    createdAt: now,
-    updatedAt: now,
-  };
-
-  addTicket(database, ticket);
-  saveDatabase(database);
-
-  return { success: true, ticket };
-}
-
-export function updateTicketStatus(
-  id: string,
-  input: UpdateTicketStatusInput,
-): UpdateTicketStatusResult {
-  const database = loadDatabase();
-  const ticket = findTicketById(database, id);
-
-  if (!ticket) {
-    return { success: false, error: { code: "not_found" } };
-  }
-
-  if (input.status === TICKET_STATUS.CLOSED && !input.comment) {
-    return { success: false, error: { code: "comment_required_to_close" } };
-  }
-
-  ticket.status = input.status;
-  touchTicket(ticket);
-
-  if (input.comment) {
-    addComment(
-      database,
-      createCommentRecord(
-        ticket.id,
-        input.authorId ?? ticket.requesterId,
-        input.comment,
-      ),
+    return filteredTickets.map((ticket) =>
+      toTicketListItem(ticket, userMap, commentCounts),
     );
   }
 
-  saveDatabase(database);
+  function getTicketById(id: string): TicketDetail | null {
+    const database = repo.load();
+    const ticket = repo.findTicketById(database, id);
 
-  return { success: true, ticket };
-}
+    if (!ticket) {
+      return null;
+    }
 
-export function addTicketComment(
-  id: string,
-  input: AddTicketCommentInput,
-): AddTicketCommentResult {
-  const database = loadDatabase();
-  const ticket = findTicketById(database, id);
+    const requester = repo.findUserById(database, ticket.requesterId);
+    const assigned = ticket.assignedToId
+      ? repo.findUserById(database, ticket.assignedToId)
+      : undefined;
+    const comments = repo
+      .findCommentsByTicketId(database, ticket.id)
+      .map((comment) => ({
+        ...comment,
+        author: repo.findUserById(database, comment.authorId),
+      }));
 
-  if (!ticket) {
-    return { success: false, error: { code: "not_found" } };
+    return { ...ticket, requester, assigned, comments };
   }
 
-  const comment = createCommentRecord(ticket.id, input.authorId, input.message);
+  function createTicket(input: CreateTicketInput): CreateTicketResult {
+    const database = repo.load();
 
-  addComment(database, comment);
-  touchTicket(ticket);
-  saveDatabase(database);
+    if (!repo.findUserById(database, input.requesterId)) {
+      return { success: false, error: { code: "invalid_requester" } };
+    }
 
-  return { success: true, comment };
+    const ticket = makeTicket(input, new Date().toISOString());
+    repo.addTicket(database, ticket);
+    repo.save(database);
+
+    return { success: true, ticket };
+  }
+
+  function updateTicketStatus(
+    id: string,
+    input: UpdateTicketStatusInput,
+  ): UpdateTicketStatusResult {
+    const database = repo.load();
+    const ticket = repo.findTicketById(database, id);
+
+    if (!ticket) {
+      return { success: false, error: { code: "not_found" } };
+    }
+
+    if (input.status === TICKET_STATUS.CLOSED && !input.comment) {
+      return { success: false, error: { code: "comment_required_to_close" } };
+    }
+
+    ticket.status = input.status;
+    repo.touchTicket(ticket);
+
+    if (input.comment) {
+      repo.addComment(
+        database,
+        makeComment(
+          {
+            ticketId: ticket.id,
+            authorId: input.authorId ?? ticket.requesterId,
+            message: input.comment,
+          },
+          new Date().toISOString(),
+        ),
+      );
+    }
+
+    repo.save(database);
+
+    return { success: true, ticket };
+  }
+
+  function addTicketComment(
+    id: string,
+    input: AddTicketCommentInput,
+  ): AddTicketCommentResult {
+    const database = repo.load();
+    const ticket = repo.findTicketById(database, id);
+
+    if (!ticket) {
+      return { success: false, error: { code: "not_found" } };
+    }
+
+    const comment = makeComment(
+      {
+        ticketId: ticket.id,
+        authorId: input.authorId,
+        message: input.message,
+      },
+      new Date().toISOString(),
+    );
+
+    repo.addComment(database, comment);
+    repo.touchTicket(ticket);
+    repo.save(database);
+
+    return { success: true, comment };
+  }
+
+  return {
+    listTickets,
+    getTicketById,
+    createTicket,
+    updateTicketStatus,
+    addTicketComment,
+  };
 }
+
+const defaultService = createTicketService(jsonTicketRepository);
+
+export const listTickets = defaultService.listTickets;
+export const getTicketById = defaultService.getTicketById;
+export const createTicket = defaultService.createTicket;
+export const updateTicketStatus = defaultService.updateTicketStatus;
+export const addTicketComment = defaultService.addTicketComment;

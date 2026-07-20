@@ -50,3 +50,40 @@ export function buildCommentCountByTicket(database: Database): Map<string, numbe
 
   return counts;
 }
+
+/**
+ * Repository pattern (interface): abstrai o armazenamento. jsonTicketRepository
+ * e a impl atual (JSON em disco); em testes, injetamos um fake que satisfaz
+ * a mesma interface. Ver docs/DESIGN_PATTERNS.md#2-repository-interface.
+ */
+export interface TicketRepository {
+  load(): Database;
+  save(database: Database): void;
+  findAllTickets(database: Database): Ticket[];
+  findTicketById(database: Database, id: string): Ticket | undefined;
+  findUserById(database: Database, id: string): User | undefined;
+  findCommentsByTicketId(database: Database, ticketId: string): TicketComment[];
+  addTicket(database: Database, ticket: Ticket): void;
+  addComment(database: Database, comment: TicketComment): void;
+  touchTicket(ticket: Ticket): void;
+  buildUserMap(database: Database): Map<string, User>;
+  buildCommentCountByTicket(database: Database): Map<string, number>;
+}
+
+/**
+ * Repository pattern: implementacao concreta baseada em JSON file.
+ * Ver docs/DESIGN_PATTERNS.md#2-repository-interface.
+ */
+export const jsonTicketRepository: TicketRepository = {
+  load: loadDatabase,
+  save: saveDatabase,
+  findAllTickets,
+  findTicketById,
+  findUserById,
+  findCommentsByTicketId,
+  addTicket,
+  addComment,
+  touchTicket,
+  buildUserMap,
+  buildCommentCountByTicket,
+};
