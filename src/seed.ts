@@ -1,7 +1,10 @@
 import fs from "node:fs";
 import path from "node:path";
+import { DATABASE_PATH } from "./config/database.js";
+import type { Database } from "./utils/database-type.js";
+import { writeDatabase } from "./utils/json-database.js";
 
-const initialDatabase = {
+const initialDatabase: Database = {
   users: [
     {
       id: "user_ana",
@@ -29,7 +32,8 @@ const initialDatabase = {
     {
       id: "ticket_001",
       title: "Nao consigo acessar o ambiente virtual",
-      description: "A pagina de login informa erro mesmo com a senha correta.",
+      description:
+        "A pagina de login informa erro mesmo com a senha correta.",
       category: "sistemas",
       status: "open",
       priority: "high",
@@ -41,7 +45,8 @@ const initialDatabase = {
     {
       id: "ticket_002",
       title: "Projetor da sala 204 nao liga",
-      description: "O equipamento esta sem imagem e a aula comeca em uma hora. Urgente.",
+      description:
+        "O equipamento esta sem imagem e a aula comeca em uma hora. Urgente.",
       category: "infra",
       status: "in_progress",
       priority: "urgent",
@@ -53,7 +58,8 @@ const initialDatabase = {
     {
       id: "ticket_003",
       title: "Duvida sobre prazo de atividade",
-      description: "Preciso confirmar a data final de entrega do projeto integrador.",
+      description:
+        "Preciso confirmar a data final de entrega do projeto integrador.",
       category: "academico",
       status: "resolved",
       priority: "medium",
@@ -68,22 +74,22 @@ const initialDatabase = {
       id: "comment_001",
       ticketId: "ticket_002",
       authorId: "user_carla",
-      message: "Chamado recebido. Vou verificar o equipamento antes da aula.",
+      message:
+        "Chamado recebido. Vou verificar o equipamento antes da aula.",
       createdAt: "2026-05-02T08:35:00.000Z",
     },
     {
       id: "comment_002",
       ticketId: "ticket_003",
       authorId: "user_bruno",
-      message: "O prazo final esta registrado no ambiente virtual da disciplina.",
+      message:
+        "O prazo final esta registrado no ambiente virtual da disciplina.",
       createdAt: "2026-05-04T09:00:00.000Z",
     },
   ],
 };
 
-const dataFile = process.env.DATA_FILE || "data/db.json";
-const databasePath = path.resolve(process.cwd(), dataFile);
-fs.mkdirSync(path.dirname(databasePath), { recursive: true });
-fs.writeFileSync(databasePath, JSON.stringify(initialDatabase, null, 2));
+fs.mkdirSync(path.dirname(DATABASE_PATH), { recursive: true });
+writeDatabase(initialDatabase);
 
-console.log(`Banco de dados reiniciado em ${databasePath}`);
+console.log(`Banco de dados reiniciado em ${DATABASE_PATH}`);

@@ -1,7 +1,10 @@
 node_modules/
 dist/
+coverage/
 .env
 .DS_Store
 npm-debug.log*
 
 TEACHER_GUIDE.md
+
+data/

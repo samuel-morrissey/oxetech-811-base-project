@@ -1,19 +1,39 @@
 import cors from "cors";
-import express from "express";
-import "dotenv/config";
-import router from "./routes";
+import express, { Application, json } from "express";
+import { env } from "./config/env.js";
+import { apiErrorHandler } from "./http/error-handler.js";
+import { router } from "./routes/index.js";
+import { notFoundFallback } from "./routes/fallbacks.js";
 
-const app = express();
-const port = Number(process.env.PORT || 3000);
+export class App {
+  private readonly app: Application;
+  private readonly port: number;
 
-app.use(cors());
-app.use(express.json());
-app.use("/api", router);
+  constructor() {
+    this.app = express();
+    this.port = env.PORT;
+    this.middlewares();
+    this.routes();
+  }
 
-app.use((_request, response) => {
-  response.status(404).json({ message: "Rota nao encontrada" });
-});
+  middlewares() {
+    this.app.use(cors());
+    this.app.use(json());
+  }
 
-app.listen(port, () => {
-  console.log(`Oxetech Helpdesk API running on http://localhost:${port}`);
-});
+  routes() {
+    this.app.use("/api", router);
+    this.app.use(notFoundFallback);
+    this.app.use(apiErrorHandler);
+  }
+
+  listen() {
+    this.app.listen(this.port, () => {
+      console.log(
+        `Oxetech Helpdesk API running on http://localhost:${this.port}`,
+      );
+    });
+  }
+}
+
+export default new App().listen();

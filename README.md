@@ -35,9 +35,13 @@ A API ficara disponivel em `http://localhost:3000/api`.
 
 - `npm run dev`: executa a API em modo desenvolvimento.
 - `npm run seed`: recria o arquivo de dados inicial.
+- `npm test`: executa a suíte de testes com Vitest.
+- `npm run test:watch`: executa testes em modo watch.
+- `npm run test:coverage`: executa testes com relatório de cobertura.
 - `npm run typecheck`: valida os tipos TypeScript.
 - `npm run build`: compila o projeto para `dist`.
-- `npm test`: placeholder inicial. Testes devem ser criados durante a evolucao.
+
+Os testes ficam em `tests/`, espelhando a estrutura de `src/`.
 
 ## Endpoints principais
 
@@ -126,3 +130,9 @@ Em cada PR, registre:
 - quais limitacoes continuam existindo.
 
 Consulte [docs/CHECKPOINTS.md](docs/CHECKPOINTS.md) para entender o escopo esperado de cada entrega.
+
+Documentos da **Avaliação 1**:
+
+- [Diagnóstico inicial](docs/DIAGNOSTICO-ATIVIDADE-1.md)
+- [Validação manual](docs/VALIDACAO-MANUAL-A1.md)
+- [Texto do Pull Request](docs/PULL-REQUEST-AVALIACAO-1.md)
