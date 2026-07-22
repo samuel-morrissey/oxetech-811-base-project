@@ -6,40 +6,67 @@ O objetivo nao e reconstruir o sistema do zero. O objetivo e entender a aplicaca
 
 ## Requisitos
 
-- Node.js 20 ou superior
-- npm
+Antes de comecar, garanta que voce tem instalado:
 
-## Como rodar
+- **Node.js 20 ou superior** — verifique com `node --version`
+- **npm** (ja vem junto com o Node.js) — verifique com `npm --version`
+- **Git** — para clonar o repositorio
 
-Instale as dependencias:
+## Como rodar o projeto
+
+Siga os passos abaixo na ordem apresentada.
+
+### 1. Clone o repositorio
+
+```bash
+git clone <url-do-repositorio>
+cd oxetech-811-base-project
+```
+
+### 2. Instale as dependencias
 
 ```bash
 npm install
 ```
 
-Reinicie os dados de exemplo, se necessario:
+### 3. Popule os dados de exemplo
+
+Este comando cria o arquivo de dados inicial usado pela API:
 
 ```bash
 npm run seed
 ```
 
-Execute em modo desenvolvimento:
+> Rode novamente sempre que quiser reiniciar os dados de exemplo do zero.
+
+### 4. Suba a API em modo desenvolvimento
 
 ```bash
 npm run dev
 ```
 
-A API ficara disponivel em `http://localhost:3000/api`.
+A API ficara disponivel em **http://localhost:3000/api**.
 
-## Scripts
+Para verificar rapidamente se tudo esta funcionando, acesse o healthcheck:
 
-- `npm run dev`: executa a API em modo desenvolvimento.
-- `npm run seed`: recria o arquivo de dados inicial.
-- `npm run typecheck`: valida os tipos TypeScript.
-- `npm run build`: compila o projeto para `dist`.
-- `npm test`: placeholder inicial. Testes devem ser criados durante a evolucao.
+```bash
+curl http://localhost:3000/api/health
+```
+
+## Scripts disponiveis
+
+| Comando | O que faz |
+| --- | --- |
+| `npm run dev` | Executa a API em modo desenvolvimento com reload automatico. |
+| `npm run seed` | Recria o arquivo de dados inicial. |
+| `npm run typecheck` | Valida os tipos TypeScript sem gerar build. |
+| `npm run build` | Compila o projeto para a pasta `dist`. |
+| `npm start` | Roda a versao ja compilada (`dist/server.js`). Execute `npm run build` antes. |
+| `npm test` | Placeholder inicial. Testes devem ser criados durante a evolucao. |
 
 ## Endpoints principais
+
+Todos os endpoints estao sob o prefixo `/api`.
 
 ### Healthcheck
 
@@ -112,6 +139,12 @@ Content-Type: application/json
   "message": "Solicitei mais informacoes ao usuario."
 }
 ```
+
+## Problemas comuns
+
+- **`EADDRINUSE: address already in use :::3000`** — a porta 3000 ja esta ocupada. Encerre o outro processo ou libere a porta antes de rodar novamente.
+- **`command not found: npm`** — Node.js/npm nao esta instalado ou nao esta no PATH. Reinstale o Node.js.
+- **Dados inconsistentes ou faltando** — rode `npm run seed` para recriar o arquivo de dados inicial.
 
 ## Jornada de refatoracao
 
