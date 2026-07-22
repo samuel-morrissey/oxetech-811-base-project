@@ -1,17 +1,29 @@
-version: '3.8'
-
 services:
-  app-oxetech:
-    image: node:20-alpine
-    container_name: oxetech_811_app
-    working_dir: /usr/src/app
-    volumes:
-      - .:/usr/src/app
-      # Protege os módulos locais para o container instalar os dele de forma isolada
-      - /usr/src/app/node_modules 
-    ports:
-      - "3010:3000"
-    # A mágica acontece aqui: ele instala as dependências e roda o script exato do seu package.json
-    command: sh -c "npm install && npm run dev"
+  postgres:
+    image: postgres:16-alpine
+    container_name: oxetech-postgres
+    restart: unless-stopped
     environment:
-      - NODE_ENV=development
+      POSTGRES_USER: oxetech
+      POSTGRES_PASSWORD: oxetech
+      POSTGRES_DB: oxetech
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U oxetech -d oxetech"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: oxetech-mailpit
+    restart: unless-stopped
+    ports:
+      - "1025:1025" # SMTP
+      - "8025:8025" # Interface web (http://localhost:8025)
+
+volumes:
+  postgres_data:
