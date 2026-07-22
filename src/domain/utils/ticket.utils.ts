@@ -1,10 +1,11 @@
 import type { Ticket, TicketPriority } from "../types";
+import type { TicketCategory } from "../ticket.constants";
 
 export function generateId(prefix: string) {
   return `${prefix}_${Date.now()}_${Math.floor(Math.random() * 10000)}`;
 }
 
-export function calculatePriority(category: string, description: string): TicketPriority {
+export function calculatePriority(category: TicketCategory, description: string): TicketPriority {
   if (category === "infra" || description.toLowerCase().includes("urgente")) {
     return "urgent";
   }

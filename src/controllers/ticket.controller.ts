@@ -1,5 +1,6 @@
 import type { Request, Response } from "express";
-import { VALID_TICKET_STATUSES } from "../domain/ticket.constants";
+import { ValidationError, NotFoundError } from "../domain/errors/app-error";
+import { VALID_TICKET_STATUSES, VALID_TICKET_CATEGORIES } from "../domain/ticket.constants";
 import type { Ticket, TicketStatus } from "../domain/types";
 import { mapTicketDetails } from "../domain/utils/ticket.mapper";
 import {
@@ -9,6 +10,7 @@ import {
   generateId,
 } from "../domain/utils/ticket.utils";
 import { sanitizeUser } from "../domain/utils/user.mapper";
+import { prisma } from "../infrastructure/database/prisma";
 import {
   getComments,
   getTickets,
@@ -57,8 +59,7 @@ export function getTicketById(request: Request, response: Response) {
   const ticket = tickets.find((item) => item.id === request.params.id);
 
   if (!ticket) {
-    response.status(404).json({ error: "Ticket nao encontrado", id: request.params.id });
-    return;
+    throw new NotFoundError("Ticket nao encontrado");
   }
 
   const users = getUsers();
@@ -69,23 +70,20 @@ export function getTicketById(request: Request, response: Response) {
   response.json(enrichedTicket);
 }
 
-export function createTicket(request: Request, response: Response) {
+export async function createTicket(request: Request, response: Response) {
   const body = request.body;
 
   if (!body.title || !body.description || !body.category || !body.requesterId) {
-    response.status(400).json({
-      message: "Campos obrigatorios ausentes",
-      required: ["title", "description", "category", "requesterId"],
-      received: body,
-    });
-    return;
+    throw new ValidationError("Campos obrigatorios ausentes");
   }
 
-  const users = getUsers();
-  const user = users.find((item) => item.id === body.requesterId);
+  if (!VALID_TICKET_CATEGORIES.includes(body.category)) {
+    throw new ValidationError(`Categoria invalida. Permitidas: ${VALID_TICKET_CATEGORIES.join(", ")}`);
+  }
+
+  const user = await prisma.user.findUnique({ where: { id: body.requesterId } });
   if (!user) {
-    response.status(400).json({ message: "Solicitante invalido" });
-    return;
+    throw new ValidationError("Solicitante invalido");
   }
 
   const now = new Date().toISOString();
@@ -107,27 +105,28 @@ export function createTicket(request: Request, response: Response) {
   response.status(201).json(ticket);
 }
 
-export function updateTicketStatus(request: Request, response: Response) {
+export async function updateTicketStatus(request: Request, response: Response) {
   const tickets = getTickets();
   const ticket = tickets.find((item) => item.id === request.params.id);
   const newStatus = request.body.status as TicketStatus;
 
   if (!ticket) {
-    response.status(404).json({ message: "Ticket nao encontrado" });
-    return;
+    throw new NotFoundError("Ticket nao encontrado");
   }
 
   if (!VALID_TICKET_STATUSES.includes(newStatus)) {
-    response.status(400).json({
-      message: "Status invalido",
-      allowed: VALID_TICKET_STATUSES,
-    });
-    return;
+    throw new ValidationError(`Status invalido. Permitidos: ${VALID_TICKET_STATUSES.join(", ")}`);
   }
 
   if (newStatus === "closed" && !request.body.comment) {
-    response.status(400).json({ message: "Informe um comentario para fechar o chamado" });
-    return;
+    throw new ValidationError("Informe um comentario para fechar o chamado");
+  }
+
+  if (request.body.authorId) {
+    const author = await prisma.user.findUnique({ where: { id: request.body.authorId } });
+    if (!author) {
+      throw new ValidationError("Autor do comentario invalido");
+    }
   }
 
   ticket.status = newStatus;
@@ -149,19 +148,22 @@ export function updateTicketStatus(request: Request, response: Response) {
   response.json(ticket);
 }
 
-export function addTicketComment(request: Request, response: Response) {
+export async function addTicketComment(request: Request, response: Response) {
   const tickets = getTickets();
   const ticket = tickets.find((item) => item.id === request.params.id);
   const body = request.body;
 
   if (!ticket) {
-    response.status(404).json({ error: "Ticket nao encontrado" });
-    return;
+    throw new NotFoundError("Ticket nao encontrado");
   }
 
   if (!body.message || !body.authorId) {
-    response.status(400).json({ error: "Comentario e autor sao obrigatorios" });
-    return;
+    throw new ValidationError("Comentario e autor sao obrigatorios");
+  }
+
+  const author = await prisma.user.findUnique({ where: { id: body.authorId } });
+  if (!author) {
+    throw new ValidationError("Autor do comentario invalido");
   }
 
   const comment = {
