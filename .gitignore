@@ -3,7 +3,14 @@ dist/
 .env
 .DS_Store
 npm-debug.log*
+coverage/
+docs/
+COMANDOS_UTEIS.md
+!docs/CHECKPOINTS.md
 /docs/MANUAL_PROTOCOLOS.md
 /docs/AV1.MD
-
+/docs/PLANO-AV1.md
+/docs/PLANO-AV2.md
+issues-numerar.json
+issues-todo.json
 TEACHER_GUIDE.md
