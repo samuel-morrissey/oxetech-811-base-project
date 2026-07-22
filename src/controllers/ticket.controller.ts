@@ -8,6 +8,7 @@ import {
   filterTickets,
   generateId,
 } from "../domain/utils/ticket.utils";
+import { sanitizeUser } from "../domain/utils/user.mapper";
 import {
   getComments,
   getTickets,
@@ -23,7 +24,8 @@ export function healthCheck(_request: Request, response: Response) {
 
 export function listUsers(_request: Request, response: Response) {
   const users = getUsers();
-  response.json(users);
+  const sanitizedUsers = users.map((user) => sanitizeUser(user));
+  response.json(sanitizedUsers);
 }
 
 export function listTickets(request: Request, response: Response) {

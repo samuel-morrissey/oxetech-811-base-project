@@ -1,4 +1,5 @@
 import type { Ticket, TicketComment, User } from "../types";
+import { sanitizeUser } from "./user.mapper";
 
 export function mapTicketDetails(
   ticket: Ticket,
@@ -6,14 +7,14 @@ export function mapTicketDetails(
   comments: TicketComment[],
   includeFullComments = false,
 ) {
-  const requester = users.find((user) => user.id === ticket.requesterId);
-  const assigned = users.find((user) => user.id === ticket.assignedToId);
+  const requester = sanitizeUser(users.find((user) => user.id === ticket.requesterId));
+  const assigned = sanitizeUser(users.find((user) => user.id === ticket.assignedToId));
   const ticketComments = comments.filter((comment) => comment.ticketId === ticket.id);
 
   if (includeFullComments) {
     const commentsWithAuthor = ticketComments.map((comment) => ({
       ...comment,
-      author: users.find((user) => user.id === comment.authorId),
+      author: sanitizeUser(users.find((user) => user.id === comment.authorId)),
     }));
 
     return {

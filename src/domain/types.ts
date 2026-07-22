@@ -12,6 +12,8 @@ export interface User {
   password: string;
 }
 
+export type SanitizedUser = Omit<User, "password">;
+
 export interface TicketComment {
   id: string;
   ticketId: string;
