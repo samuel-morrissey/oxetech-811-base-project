@@ -1,0 +1,67 @@
+services:
+  # Banco de Dados
+  postgres:
+    image: postgres:16-alpine
+    container_name: postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: oxetech
+      POSTGRES_PASSWORD: oxetech
+      POSTGRES_DB: oxetech
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U oxetech -d oxetech"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # Backend API (Express + Prisma)
+  back:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: builder
+    container_name: back
+    command: npm run dev
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      - DATABASE_URL=postgresql://oxetech:oxetech@postgres:5432/oxetech?schema=public
+      - NODE_ENV=development
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+      - /app/node_modules/.prisma
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # Frontend Web (React + Vite)
+  front:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: front
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      - back
+
+  # SMTP / Mailpit
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: oxetech-mailpit
+    restart: unless-stopped
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+
+volumes:
+  postgres_data:

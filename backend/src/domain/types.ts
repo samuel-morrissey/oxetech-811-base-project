@@ -1,3 +1,5 @@
+import type { TicketCategory } from "./ticket.constants";
+
 export type TicketStatus = "open" | "in_progress" | "resolved" | "closed";
 
 export type TicketPriority = "low" | "medium" | "high" | "urgent";
@@ -12,6 +14,8 @@ export interface User {
   password: string;
 }
 
+export type SanitizedUser = Omit<User, "password">;
+
 export interface TicketComment {
   id: string;
   ticketId: string;
@@ -24,7 +28,7 @@ export interface Ticket {
   id: string;
   title: string;
   description: string;
-  category: string;
+  category: TicketCategory;
   status: TicketStatus;
   priority: TicketPriority;
   requesterId: string;
