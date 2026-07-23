@@ -72,6 +72,17 @@ describe("ticket.utils", () => {
           createdAt: "",
           updatedAt: "",
         },
+        {
+          id: "4",
+          title: "t4",
+          description: "d4",
+          category: "academico",
+          status: "closed",
+          priority: "low",
+          requesterId: "u1",
+          createdAt: "",
+          updatedAt: "",
+        },
       ];
 
       const summary = calculateTicketSummary(tickets);
@@ -79,7 +90,7 @@ describe("ticket.utils", () => {
         open: 1,
         in_progress: 1,
         resolved: 1,
-        closed: 0,
+        closed: 1,
         urgent: 1,
       });
     });
