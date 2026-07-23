@@ -4,9 +4,10 @@ dist/
 .DS_Store
 npm-debug.log*
 coverage/
-docs/
+docs/*
 COMANDOS_UTEIS.md
 !docs/CHECKPOINTS.md
+!docs/TESTS_README.md
 /docs/MANUAL_PROTOCOLOS.md
 /docs/AV1.MD
 /docs/PLANO-AV1.md
