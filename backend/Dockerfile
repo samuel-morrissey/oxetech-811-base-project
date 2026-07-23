@@ -1,5 +1,5 @@
 # --- Etapa de Build ---
-FROM node:lts-alpine AS builder
+FROM node:20-alpine AS builder
 WORKDIR /app
 COPY package.json package-lock.json .
 RUN npm ci
@@ -9,7 +9,7 @@ COPY src ./src
 RUN npm run build
 
 # --- Etapa de Runner ---
-FROM node:lts-alpine AS runner
+FROM node:20-alpine AS runner
 ENV NODE_ENV=production
 WORKDIR /app
 COPY package.json package-lock.json ./
