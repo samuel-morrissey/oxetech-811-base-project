@@ -1,128 +1,88 @@
-# Oxetech Helpdesk API
+# Oxetech Helpdesk Monorepo
 
-Esta e uma codebase-base para exercicios de refatoracao incremental. O projeto simula uma API simples de chamados de suporte academico.
+Este projeto é um monorepo para o sistema **Oxetech Helpdesk**, contendo uma aplicação web em React (frontend) e uma API Node.js Express integrada com o Prisma ORM e PostgreSQL (backend). Ele também deixa o espaço estruturado para incluir uma futura aplicação mobile em React Native.
 
-O objetivo nao e reconstruir o sistema do zero. O objetivo e entender a aplicacao existente, identificar problemas tecnicos, fazer melhorias pequenas e justificar as decisoes por Pull Request.
+---
 
-## Requisitos
+## 📁 Estrutura de Pastas
 
-- Node.js 20 ou superior
-- npm
+* **`backend/`**: API de chamados desenvolvida com Express, Prisma ORM e PostgreSQL. Inclui suite de testes automatizados com Vitest.
+* **`frontend/`**: Aplicação Web de painel construída em React + Vite, estilizada com Vanilla CSS premium e configurada para hot-reload.
+* **`mobile/`**: (Espaço reservado) Pasta futura para a aplicação móvel em React Native.
+* **`docker-compose.yml`**: Orquestrador na raiz do projeto contendo os containers de banco de dados, API, frontend e servidor de email local.
 
-## Como rodar
+---
 
-Instale as dependencias:
+## 🛠️ Requisitos
 
-```bash
-npm install
-```
+* Docker e Docker Compose instalados na máquina host (ou integrados ao WSL).
+* Node.js v20+ e npm (caso deseje rodar comandos/testes de forma local fora dos containers).
 
-Reinicie os dados de exemplo, se necessario:
+---
 
-```bash
-npm run seed
-```
+## 🚀 Como Executar o Projeto com Docker
 
-Execute em modo desenvolvimento:
+Para iniciar todo o ecossistema (Postgres + Backend + Frontend + Mailpit) com suporte a hot-reload:
 
-```bash
-npm run dev
-```
+1. **Subir os containers:**
+   ```bash
+   docker compose up -d --build
+   ```
 
-A API ficara disponivel em `http://localhost:3000/api`.
+2. **Aplicar Migrations (criar as tabelas no Postgres):**
+   ```bash
+   docker compose exec back npx prisma migrate deploy
+   ```
 
-## Scripts
+3. **Popular o Banco de Dados (Seed):**
+   ```bash
+   docker compose exec back npm run seed
+   ```
 
-- `npm run dev`: executa a API em modo desenvolvimento.
-- `npm run seed`: recria o arquivo de dados inicial.
-- `npm run typecheck`: valida os tipos TypeScript.
-- `npm run build`: compila o projeto para `dist`.
-- `npm test`: placeholder inicial. Testes devem ser criados durante a evolucao.
+---
 
-## Endpoints principais
+## 🌐 Endereços e Portas
 
-### Healthcheck
+* **Interface Web (React):** [http://localhost:5173](http://localhost:5173)
+* **Backend API (Express):** [http://localhost:3000/api](http://localhost:3000/api)
+  * Rota de saúde: [http://localhost:3000/api/health](http://localhost:3000/api/health)
+* **Mailpit (Visualização de Emails):** [http://localhost:8025](http://localhost:8025)
+* **PostgreSQL:** `localhost:5432` (Usuário: `oxetech` / Senha: `oxetech` / Banco: `oxetech`)
 
-```http
-GET /api/health
-```
+---
 
-### Listar usuarios
+## 🧪 Como Executar os Testes Automatizados (Vitest)
 
-```http
-GET /api/users
-```
+Os testes automatizados e o typecheck de tipos TypeScript devem ser rodados dentro da pasta `/backend/`:
 
-### Listar chamados
+1. **Entrar na pasta:**
+   ```bash
+   cd backend
+   ```
+2. **Executar a suite de testes (21 testes passando):**
+   ```bash
+   npm test
+   ```
+3. **Verificar os tipos estáticos (TypeScript):**
+   ```bash
+   npm run typecheck
+   ```
+4. **Verificar cobertura de código:**
+   ```bash
+   npx vitest run --coverage
+   ```
 
-```http
-GET /api/tickets
-GET /api/tickets?status=open
-GET /api/tickets?category=infra
-GET /api/tickets?search=login
-```
+Para ver instruções de testes mais detalhadas, consulte o arquivo [docs/TESTS_README.md](file:///home/jaspion/projetos/oxetech-811-base-project/docs/TESTS_README.md).
 
-### Resumo dos chamados
+---
 
-```http
-GET /api/tickets/summary
-```
+## 🚦 Endpoints Principais da API
 
-### Detalhar chamado
-
-```http
-GET /api/tickets/ticket_001
-```
-
-### Criar chamado
-
-```http
-POST /api/tickets
-Content-Type: application/json
-
-{
-  "title": "Nao consigo enviar atividade",
-  "description": "O sistema apresenta erro ao anexar o arquivo da atividade.",
-  "category": "sistemas",
-  "requesterId": "user_ana"
-}
-```
-
-### Atualizar status
-
-```http
-PATCH /api/tickets/ticket_001/status
-Content-Type: application/json
-
-{
-  "status": "in_progress",
-  "authorId": "user_carla",
-  "comment": "Chamado em atendimento."
-}
-```
-
-### Adicionar comentario
-
-```http
-POST /api/tickets/ticket_001/comments
-Content-Type: application/json
-
-{
-  "authorId": "user_carla",
-  "message": "Solicitei mais informacoes ao usuario."
-}
-```
-
-## Jornada de refatoracao
-
-Trabalhe em Pull Requests pequenos e bem explicados.
-
-Em cada PR, registre:
-
-- quais problemas voce encontrou;
-- quais melhorias foram feitas;
-- quais conceitos do curso foram aplicados;
-- como voce verificou que o comportamento continua funcionando;
-- quais limitacoes continuam existindo.
-
-Consulte [docs/CHECKPOINTS.md](docs/CHECKPOINTS.md) para entender o escopo esperado de cada entrega.
+* `GET /api/health` - Healthcheck do serviço.
+* `GET /api/users` - Lista os usuários (com dados confidenciais sanitizados).
+* `GET /api/tickets` - Lista e filtra chamados por `status`, `category` ou termo de busca `search`.
+* `GET /api/tickets/summary` - Retorna a contagem de chamados por status e prioridades urgentes.
+* `GET /api/tickets/:id` - Detalha um chamado específico incluindo os comentários associados.
+* `POST /api/tickets` - Cria um novo chamado (com validações de categoria e solicitante).
+* `PATCH /api/tickets/:id/status` - Altera o status de um chamado (exige comentário ao fechar).
+* `POST /api/tickets/:id/comments` - Insere um novo comentário em um chamado.
